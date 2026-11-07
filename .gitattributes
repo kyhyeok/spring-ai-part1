@@ -1,0 +1,7 @@
+# 줄바꿈 고정: 셸 스크립트는 LF, Windows 배치 파일은 CRLF
+# (Windows에서 clone해도 mvnw/gradlew가 깨지지 않도록)
+mvnw text eol=lf
+gradlew text eol=lf
+*.sh text eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf

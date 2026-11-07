@@ -1,0 +1,69 @@
+target/
+# 중간에 '/'가 있는 패턴은 루트 기준으로만 매칭되므로 '**/'로 하위 프로젝트까지 적용
+**/.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### 비밀값 / 로컬 설정 (절대 커밋 금지) ###
+# 환경변수 파일 (.env.example 같은 예시 파일만 허용)
+.env
+.env.*
+!.env.example
+# direnv 설정 / IntelliJ HTTP Client 비공개 환경 파일
+.envrc
+http-client.private.env.json
+# 로컬 전용 Spring 설정 (키를 직접 넣을 수 있는 파일)
+application-local.*
+application-secret*.*
+# 인증서 / 키 저장소
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+
+### Spring Initializr ###
+HELP.md
+
+### 강의 자료 (저작권 보호, 실수로 커밋 방지) ###
+*.pdf
+
+### 로그 ###
+*.log
+logs/
+
+### macOS ###
+.DS_Store
+
+### AI 도구 로컬 상태 (세션 ID, 로컬 경로, 비용 정보 포함) ###
+.omc/
+**/.claude/settings.local.json
+CLAUDE.local.md
