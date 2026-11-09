@@ -12,7 +12,7 @@ class QuestionController(
     private val openAIService: OpenAIService,
 ) {
 
-    // Java 원본(ch3_begin)과 동일하게 아직 미구현 상태 — 이후 강의 실습에서 구현
     @PostMapping("/ask")
-    fun askQuestion(@RequestBody question: Question): Answer? = null
+    fun askQuestion(@RequestBody question: Question): Answer =
+        openAIService.getAnswer(question)
 }
