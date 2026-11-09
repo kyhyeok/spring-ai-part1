@@ -6,3 +6,5 @@ spring:
       api-key: ${OPENAI_API_KEY}
       chat:
         model: gpt-4o-mini
+        temperature: 1.2
+        max-tokens: 500
