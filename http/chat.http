@@ -3,11 +3,27 @@
 ### 질문하기 (ChatController#ask) - 한글은 URL 인코딩 필요
 GET {{host}}/api/ai/ask?question=최신 Spring AI의 특징을 간략하게 요약해줘
 
-### 질문하기 (ChatController#ask) - 한글은 URL 인코딩 필요
+### 질문하기 (ChatController#ask)
 GET {{host}}/api/ai/ask?question=최신 Spring AI의 특징을 3가지만 알려줘
 
-### 질문하기 (ChatController#stream) - 한글은 URL 인코딩 필요
+### 질문하기 (ChatController#stream)
 GET {{host}}/api/ai/stream?question=최신 Spring AI의 특징을 간략하게 요약해줘
 
-### 질문하기 (ChatController#stream) - 한글은 URL 인코딩 필요
+### 질문하기 (ChatController#stream)
 GET {{host}}/api/ai/stream?question=최신 Spring AI의 특징을 3가지만 알려줘
+
+### 질문하기 (QuestionController#askQuestion) - JSON 본문으로 전송
+POST {{host}}/ask
+Content-Type: application/json
+
+{
+    "question": "최신 Spring AI의 특징을 3가지만 알려줘"
+}
+
+### 질문하기 (QuestionController#askQuestion) - JSON 본문으로 전송
+POST {{host}}/ask
+Content-Type: application/json
+
+{
+  "question": "AI 회사명을 3가지 정도 작성해줘"
+}
