@@ -34,8 +34,9 @@ spring-ai-part1/
 
 | Java | Kotlin |
 |---|---|
-| `record Answer(String answer)` | `data class Answer(val answer: String)` |
-| record 필드는 null 허용 | `String`은 non-null — `POST /ask`에 `{}`·`{"question":null}`이 오면 Java는 통과, Kotlin은 400 |
+| `record Question(String question)` | `data class Question(val question: String)` — non-null이라 `POST /ask`에 `{}`·`{"question":null}`이 오면 Java는 통과, Kotlin은 400 |
+| `record Answer(String answer)` | `data class Answer(val answer: String?)` — Spring AI `getText()`가 `@Nullable`이라 null 허용 (Java와 동일하게 `{"answer": null}`) |
+| `response.getResult().getOutput()` (결과가 없으면 NPE) | `checkNotNull(response.result)` — 같은 500이지만 원인 메시지가 남음 |
 | `String` 반환 (null 가능) | `String?` — Spring AI의 `content()`가 `@Nullable`이라 Kotlin 타입에 그대로 드러남 |
 | 생성자 + `private final` 필드 | 주 생성자 프로퍼티 (`class Foo(private val bar: Bar)`) |
 | Lombok | 사용하지 않음 (Kotlin 문법으로 대체) |
@@ -96,7 +97,7 @@ cd Java/ch3_begin      # Kotlin 버전은 cd Kotlin/ch3_begin
 | GET | `/api/ai/ask?question=...` | 질문을 보내고 답변 전체를 한 번에 받음 (`call()`) |
 | GET | `/api/ai/stream?question=...` | 답변을 SSE(`text/event-stream`)로 조각조각 받음 (`stream()`) |
 | GET | `/api/ai/model` | 현재 사용 중인 ChatModel 클래스와 모델 이름 |
-| POST | `/ask` | 질문/답변 (구현 예정) |
+| POST | `/ask` | JSON 본문 `{"question": "..."}` → `{"answer": "..."}` (서비스 계층에서 `ChatModel` + `PromptTemplate` 사용) |
 
 각 프로젝트의 `http/chat.http`에서 IntelliJ HTTP Client로 바로 호출해 볼 수 있습니다.
 
