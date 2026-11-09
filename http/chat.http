@@ -6,5 +6,8 @@ GET {{host}}/api/ai/ask?question=최신 Spring AI의 특징을 간략하게 요�
 ### 질문하기 (ChatController#ask) - 한글은 URL 인코딩 필요
 GET {{host}}/api/ai/ask?question=최신 Spring AI의 특징을 3가지만 알려줘
 
-### 질문하기 - 영어 질문
-GET {{host}}/api/ai/ask?question=What%20is%20Spring%20AI%3F
+### 질문하기 (ChatController#stream) - 한글은 URL 인코딩 필요
+GET {{host}}/api/ai/stream?question=최신 Spring AI의 특징을 간략하게 요약해줘
+
+### 질문하기 (ChatController#stream) - 한글은 URL 인코딩 필요
+GET {{host}}/api/ai/stream?question=최신 Spring AI의 특징을 3가지만 알려줘

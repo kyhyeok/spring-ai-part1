@@ -25,9 +25,12 @@ public class ChatController {
 			.content();
 	}
 
-	@GetMapping("/stream")
-	public String stream(@RequestParam String question) {
-		return null;
+	@GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+	public Flux<String> stream(@RequestParam String question) {
+		return chatClient.prompt()
+			.user(question)
+			.stream()
+			.content();
 	}
 }
 
