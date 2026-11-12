@@ -1,0 +1,22 @@
+@host = http://localhost:8080
+
+### 대화 기억 1단계 (MemoryChatController#chat) - 이름 알려주기
+POST {{host}}/api/chat/kenneth
+Content-Type: text/plain; charset=UTF-8
+
+제 이름은 Kenneth입니다
+
+### 대화 기억 2단계 (MemoryChatController#chat) - 같은 conversationId라 이름을 기억함
+POST {{host}}/api/chat/kenneth
+Content-Type: text/plain; charset=UTF-8
+
+제 이름이 뭐라고 했죠?
+
+### 다른 대화 (MemoryChatController#chat) - conversationId가 다르면 기억하지 못함
+POST {{host}}/api/chat/new_user
+Content-Type: text/plain; charset=UTF-8
+
+제 이름이 뭐라고 했죠?
+
+### 대화 기억 + 스트리밍 (MemoryChatController#stream) - 1단계 실행 후 호출
+GET {{host}}/api/chat/kenneth/stream?message=제 이름을 Hyeok입니다.
