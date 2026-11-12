@@ -1,6 +1,9 @@
 spring:
   application:
     name: spring-ai-part1
+  servlet:
+    encoding:
+      force-response: true   # SSE(text/event-stream) 응답에도 charset=UTF-8을 붙여 IntelliJ HTTP Client에서 한글이 깨지지 않게 함
   ai:
     openai:
       api-key: ${OPENAI_API_KEY}
