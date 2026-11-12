@@ -1,0 +1,22 @@
+@host = http://localhost:8080
+
+### 영화 한 편 조회 (MovieController#one) - entity()로 Movie record 매핑
+GET {{host}}/api/movies/one?title=기생충
+
+### 영화 한 편 조회 (MovieController#one) - 기본값(title=기생충) 사용
+GET {{host}}/api/movies/one
+
+### 감독 대표작 목록 (MovieController#byDirector) - List<Movie> 매핑
+GET {{host}}/api/movies/by-director?director=봉준호&count=3
+
+### 감독 대표작 목록 (MovieController#byDirector) - 다른 감독, 개수 변경
+GET {{host}}/api/movies/by-director?director=박찬욱&count=5
+
+### 함정: 문자열로 JSON 직접 요청 (MovieController#rawJsonTrap) - ```json 펜스가 붙을 수 있음
+GET {{host}}/api/movies/raw-json-trap?title=기생충
+
+### 대응①: 프롬프트에 마크다운 금지 명시 (MovieController#rawJsonFixed)
+GET {{host}}/api/movies/raw-json-fixed?title=기생충
+
+### entity()가 자동으로 붙이는 포맷 지시문(JSON 스키마) 확인 (MovieController#format) - OpenAI 호출 없음
+GET {{host}}/api/movies/format
