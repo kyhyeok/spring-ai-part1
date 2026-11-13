@@ -19,4 +19,4 @@ Content-Type: text/plain; charset=UTF-8
 제 이름이 뭐라고 했죠?
 
 ### 대화 기억 + 스트리밍 (MemoryChatController#stream) - 1단계 실행 후 호출
-GET {{host}}/api/chat/kenneth/stream?message=제 이름을 Hyeok입니다.
+GET {{host}}/api/chat/kenneth/stream?message=제 이름은 Hyeok입니다.
