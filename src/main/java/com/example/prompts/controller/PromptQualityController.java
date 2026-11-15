@@ -57,6 +57,6 @@ public class PromptQualityController {
 		return Map.of(
 			"question", question,
 			"answer", service.customerCenterBot(company, question),
-			"기대 동작", "'상담원 연결을 도와드리겠습니다.로 답해야 정상'");
+			"기대 동작", "'상담원 연결을 도와드리겠습니다'로 답해야 정상");
 	}
 }
