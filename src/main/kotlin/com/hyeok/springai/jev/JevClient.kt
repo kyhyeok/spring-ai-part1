@@ -1,22 +1,35 @@
 package com.hyeok.springai.jev
 
+import org.springframework.http.MediaType
+import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
+import org.springframework.web.client.requiredBody
 
-//@Component
+@Component
 class JevClient(
     private val props: JevProperties,
 ) {
-    // begin 코드의 빈자리: 이후 강의에서 RestClient를 만든다. 지금은 Java와 같이 null
-    private val restClient: RestClient? = null
+    private val restClient: RestClient = RestClient.builder()
+        // Java처럼 base-url 설정이 없어도 빈은 만들어지도록, 값이 있을 때만 지정한다
+        .also { builder -> props.baseUrl?.let { builder.baseUrl(it) } }
+        .defaultHeader("Authorization", "Bearer ${props.apiKey}")
+        .build()
 
     fun enabled(): Boolean = props.enabled
 
     /** state 하나에 여러 질문을 보내고, 질문 key별 결정을 돌려받습니다. */
-    // begin 코드의 빈자리: Java와 같이 지금은 null을 돌려준다
-    fun decide(state: Any, questions: Map<String, Any>): Map<String, Decision>? = null
+    fun decide(state: Any, questions: Map<String, Any>): Map<String, Decision> =
+        restClient.post()
+            .uri("/v1/systemone")
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(mapOf("model" to props.model, "state" to state, "questions" to questions))
+            .retrieve()
+            .requiredBody<JevResponse>() // 응답 본문이 비면 예외 (Java는 NPE)
+            .answers
 
+    // model은 코드에서 읽지 않고 응답에 항상 온다는 근거도 없어 nullable (Java처럼 빠져도 실패하지 않게)
     data class JevResponse(
-        val model: String,
+        val model: String?,
         val answers: Map<String, Decision>,
     )
 

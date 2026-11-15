@@ -1,6 +1,7 @@
 package com.hyeok.springai.services
 
 import com.hyeok.springai.model.Movie
+import com.hyeok.springai.model.ReviewAnalysis
 
 interface MovieService {
 
@@ -14,7 +15,8 @@ interface MovieService {
 
     fun describeFormat(): String
 
-//    fun analyzeReviewWithLlm(review: String): ReviewAnalysis?
-//
-//    fun analyzeReviewWithJev(review: String): ReviewAnalysis?
+    // LLM 버전은 entity()가 @Nullable이라 nullable, Jev 버전은 항상 결과를 만들어 non-null
+    fun analyzeReviewWithLlm(review: String): ReviewAnalysis?
+
+    fun analyzeReviewWithJev(review: String): ReviewAnalysis
 }
