@@ -57,7 +57,7 @@ class PromptQualityController(
     ): Map<String, String> = mapOf(
         "question" to question,
         "answer" to checkAnswer(service.customerCenterBot(company, question)),
-        "기대 동작" to "'상담원 연결을 도와드리겠습니다.로 답해야 정상'",
+        "기대 동작" to "'상담원 연결을 도와드리겠습니다'로 답해야 정상",
     )
 
     // Java의 Map.of는 null 값을 받지 않아 답변이 null이면 NPE(500)가 난다. 같은 동작을 위해 null이면 예외
