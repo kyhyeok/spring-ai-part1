@@ -97,6 +97,10 @@ public class PromptQualityService {
 	 * 고객센터 봇 예시를 외부 파일(system-customer-center.st)에서 읽어 {company}만 바인딩한다.
 	 */
 	public String customerCenterBot(String company, String question) {
-		return null;
+		PromptTemplate template = new PromptTemplate(customerCenterResource);
+
+		String systemText = template.render(Map.of("company", company));
+
+		return runner.systemAndUser(systemText, question);
 	}
 }
