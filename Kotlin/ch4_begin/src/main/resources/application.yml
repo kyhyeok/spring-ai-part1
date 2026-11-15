@@ -11,3 +11,9 @@ spring:
         model: gpt-4o-mini
         temperature: 1.2
         max-tokens: 500
+
+jev:
+  enabled: ${JEV_ENABLED:false}
+  api-key: ${TYPESAFE_API_KEY:}
+  base-url: https://api.typesafe.ai
+  model: jev-1.14.0

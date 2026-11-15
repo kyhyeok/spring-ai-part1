@@ -1,16 +1,23 @@
 package com.hyeok.springai.controllers
 
+import com.hyeok.springai.jev.JevClient
 import com.hyeok.springai.model.Movie
+import com.hyeok.springai.model.ReviewAnalysis
 import com.hyeok.springai.services.MovieService
+import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.server.ResponseStatusException
 
 @RestController
 @RequestMapping("/api/movies")
 class MovieController(
     private val movieService: MovieService,
+    private val jevClient: JevClient,
 ) {
 
     // entity()·content()가 @Nullable이라 반환형도 nullable. null이면 Java와 같이 빈 본문 200
@@ -35,4 +42,16 @@ class MovieController(
     /** [S8~S10 노트] entity()가 자동 주입하는 포맷 지시문(JSON 스키마) 확인 */
     @GetMapping("/format")
     fun format(): String = movieService.describeFormat()
+
+    @PostMapping("/review/llm")
+    fun reviewLlm(@RequestBody review: String): ReviewAnalysis? =
+        movieService.analyzeReviewWithLlm(review)
+
+    @PostMapping("/review/jev")
+    fun reviewJev(@RequestBody review: String): ReviewAnalysis {
+        if (!jevClient.enabled()) {
+            throw ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "jev.enabled=false")
+        }
+        return movieService.analyzeReviewWithJev(review)
+    }
 }

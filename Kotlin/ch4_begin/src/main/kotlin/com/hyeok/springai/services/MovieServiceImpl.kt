@@ -11,7 +11,10 @@ import org.springframework.core.ParameterizedTypeReference
 import org.springframework.stereotype.Service
 
 @Service
-class MovieServiceImpl(builder: ChatClient.Builder) : MovieService {
+class MovieServiceImpl(
+    builder: ChatClient.Builder,
+    private val jevClient: JevClient,
+) : MovieService {
 
     private val chatClient: ChatClient = builder.build()
 
@@ -77,24 +80,58 @@ class MovieServiceImpl(builder: ChatClient.Builder) : MovieService {
      * [S10-대응②와 비교] LLM + entity() — 스키마를 "부탁"하는 방식.
      * 대부분 잘 되지만 enum에 없는 값이 오면 파싱 예외가 날 수 있습니다.
      */
-    // begin 코드의 빈자리: Java와 같이 지금은 null을 돌려준다
-    fun analyzeReviewWithLlm(review: String): ReviewAnalysis? = null
+    override fun analyzeReviewWithLlm(review: String): ReviewAnalysis? =
+        chatClient.prompt()
+            .user {
+                // Java 텍스트 블록은 끝에 줄바꿈이 붙으므로 같은 프롬프트가 되도록 "\n"을 더한다
+                it.text(
+                    """
+                    다음 영화 리뷰를 분석해줘.
+                    sentiment는 0(매우 부정) ~ 4(매우 긍정), confidence는 null로 둬.
+                    리뷰: {review}
+                    """.trimIndent() + "\n",
+                ).param("review", review)
+            }
+            .call()
+            .entity(ReviewAnalysis::class.java)
 
     /**
      * [S10-대응③] Jev — 보기 중에서만 고르므로 형식 오류가 구조적으로 불가능.
      * criteria를 enum에서 만들기 때문에 응답은 항상 Genre.valueOf()로 변환됩니다.
      */
-    fun analyzeReviewWithJev(review: String): ReviewAnalysis? {
+    override fun analyzeReviewWithJev(review: String): ReviewAnalysis {
         // 선언 순서를 지키는 Map (associate는 LinkedHashMap을 만든다)
         val genreCriteria: Map<String, String> = Genre.entries.associate { it.name to it.description }
 
-        // begin 코드의 빈자리: 이후 강의에서 Jev 호출 결과가 들어온다.
-        // Java와 같이 지금 호출하면 여기서 NullPointerException이 난다.
-        val answers: Map<String, JevClient.Decision>? = null
+        val answers = jevClient.decide(
+            review,
+            mapOf(
+                "genre" to mapOf(
+                    "type" to "choice",
+                    "instructions" to "리뷰가 다루는 영화의 장르는?",
+                    "criteria" to genreCriteria,
+                ),
+                "sentiment" to mapOf(
+                    "type" to "score",
+                    "instructions" to "리뷰 작성자의 영화 평가는?",
+                    "criteria" to listOf("매우 부정", "부정", "보통", "긍정", "매우 긍정"),
+                ),
+                "spoiler" to mapOf(
+                    "type" to "noul",
+                    "instructions" to "리뷰가 결말이나 반전을 드러내는가?",
+                ),
+            ),
+        )
 
-        val genre: JevClient.Decision? = answers!!["genre"]
+        // 질문 타입에 맞는 값이 없으면 Java는 NPE, Kotlin은 원인을 담은 예외 (둘 다 500)
+        val genre = answers.getValue("genre")
 
-        return null
+        return ReviewAnalysis(
+            genre = Genre.valueOf(checkNotNull(genre.choice) { "genre.choice 없음" }),
+            sentiment = checkNotNull(answers.getValue("sentiment").score) { "sentiment.score 없음" },
+            spoiler = checkNotNull(answers.getValue("spoiler").noul) { "spoiler.noul 없음" } >= 0.5,
+            confidence = genre.confidence,
+        )
     }
 
     companion object {
