@@ -29,7 +29,7 @@ spring-ai-part1/
 |---|---|---|---|
 | [Java/ch3_begin](Java/ch3_begin) | Java | ch3 | Spring AI 시작하기 — ChatClient 기본 호출, 스트리밍, 옵션(temperature·max-tokens), 사용 모델 조회 API |
 | [Kotlin/ch3_begin](Kotlin/ch3_begin) | Kotlin | ch3 | 위 Java 프로젝트의 Kotlin 변환본 (동일한 API) |
-| [Java/ch4_begin](Java/ch4_begin) | Java | ch4 | ChatModel 심화 — 구조화된 출력(`entity()`로 record·List 매핑, 문자열 JSON 함정과 대응), 대화 기억(`ChatMemory` + 스트리밍) |
+| [Java/ch4_begin](Java/ch4_begin) | Java | ch4 | ChatModel 심화 — 구조화된 출력(`entity()`로 record·List 매핑, 문자열 JSON 함정과 대응), 대화 기억(`ChatMemory` + 스트리밍), 리뷰 분석 비교(LLM `entity()` vs Jev) |
 | [Kotlin/ch4_begin](Kotlin/ch4_begin) | Kotlin | ch4 | 위 Java 프로젝트의 Kotlin 변환본 (동일한 API, Kotlin답게 다듬음) |
 
 각 폴더는 독립된 Maven 프로젝트입니다. IntelliJ에서는 폴더 안의 `pom.xml`을 프로젝트로 열면 됩니다.
@@ -63,12 +63,16 @@ Kotlin 버전은 Java를 줄 단위로 옮기지 않고, Kotlin답게 옮긴 뒤
 | Java | Kotlin |
 |---|---|
 | `record Movie(String title, int year, String director)` | 모든 필드 non-null — Kotlin은 null 여부로 `entity()` 스키마의 required를 정하므로, 그래야 프롬프트에 붙는 스키마가 Java와 같음. 대신 LLM이 `title`/`director`를 null로 주거나 빼면 Java는 null을 담아 200, Kotlin은 역직렬화 예외로 500 |
-| `record ReviewAnalysis(..., Double confidence)` | `confidence: Double?` — LLM 버전에서 null을 받으므로 nullable. 그래서 `entity()` 스키마에서 이 필드만 다름 (Java: required + number / Kotlin: required 아님 + number 또는 null) |
+| `record ReviewAnalysis(..., Double confidence)` | `confidence: Double?` — LLM 버전에서 null을 받으므로 nullable. 그래서 `/review/llm`이 OpenAI에 보내는 스키마에서 이 필드만 다름 (Java: required + number / Kotlin: required 아님 + number 또는 null). `@JsonProperty(required = true)`를 붙여도 같아지지 않음. 또 LLM이 `genre`를 null로 주면 Java는 null을 담아 200, Kotlin은 500 |
 | `.entity(new ParameterizedTypeReference<List<Movie>>() {})` | `.entity(object : ParameterizedTypeReference<List<Movie>>() {})` — Spring AI의 Kotlin 확장 `entity<T>()`는 반환형이 non-null이라 LLM이 `null`을 답하면 500이 되므로 쓰지 않음 (Java는 200 빈 본문) |
 | `enum Genre` + `description()` 메서드 | `enum class Genre(val description: String)` — 접근자 메서드 대신 프로퍼티 |
 | Lombok `@Slf4j` | `companion object`의 SLF4J 로거 |
 | `record JevProperties(boolean enabled, String apiKey, ...)` | `enabled: Boolean = false`, 문자열은 `String?` — 설정이 없을 때 Java record와 같게 바인딩 |
 | 텍스트 블록 `"""..."""` (끝에 줄바꿈 포함) | `"""...""".trimIndent() + "\n"` — 프롬프트를 Java와 글자 단위로 같게 맞춤 |
+| `RestClient.builder().baseUrl(props.baseUrl())` | `.also { builder -> props.baseUrl?.let { builder.baseUrl(it) } }` — Kotlin에서 `baseUrl()`은 null을 받지 않으므로 값이 있을 때만 지정 (설정이 없어도 빈이 만들어지는 동작은 Java와 같음) |
+| `.retrieve().body(JevResponse.class).answers()` | `.retrieve().requiredBody<JevResponse>().answers` — 응답 본문이 비면 바로 예외 (Java는 NPE, 둘 다 500) |
+| `answers.get("spoiler").noul() >= 0.5` (값이 없으면 NPE) | `checkNotNull(answers.getValue("spoiler").noul) { ... } >= 0.5` — 원인을 담은 예외 (둘 다 500) |
+| `Map.of(...)`로 Jev 질문 구성 | `mapOf(...)` — 선언 순서를 지킴 (Java `Map.of`는 실행마다 JSON 키 순서가 달라짐, 내용은 같음) |
 
 ch4 Kotlin에서 추가로 다듬은 점 (외부 동작은 Java와 동일):
 
@@ -117,6 +121,15 @@ cd Java/ch4_begin      # 챕터 폴더로 이동 (Kotlin 버전은 cd Kotlin/ch4
 
 모든 프로젝트가 기본 포트 8080을 사용합니다. 동시에 띄우려면 한쪽을 `./mvnw spring-boot:run -Dspring-boot.run.arguments=--server.port=8081`로 실행하세요.
 
+ch4의 Jev 리뷰 분석(`POST /api/movies/review/jev`)은 기본으로 꺼져 있어 503을 돌려줍니다.
+켜려면 TypeSafe API 키를 환경변수 `TYPESAFE_API_KEY`로 넣고 `JEV_ENABLED=true`로 실행하세요.
+키는 OpenAI 키와 같은 방법으로 넣으면 됩니다.
+
+```zsh
+read -rs "TYPESAFE_API_KEY?TypeSafe API Key: " && echo && export TYPESAFE_API_KEY
+JEV_ENABLED=true ./mvnw spring-boot:run
+```
+
 ch3은 시작할 때 `AiRunner`가 샘플 질문을 한 번 보내고 답변을 콘솔에 출력합니다. 이때 OpenAI API 사용량이 발생합니다.
 
 > ch3은 테스트(`./mvnw test`)와 패키징(`./mvnw package`)도 `@SpringBootTest`로 애플리케이션을 띄우므로
@@ -147,9 +160,12 @@ ch3은 시작할 때 `AiRunner`가 샘플 질문을 한 번 보내고 답변을 
 | GET | `/api/movies/format` | `entity()`가 프롬프트 뒤에 자동으로 붙이는 포맷 지시문(JSON 스키마). OpenAI 호출 없음 |
 | POST | `/api/chat/{conversationId}` | 본문(`text/plain`)의 메시지로 대화. 같은 `conversationId`면 최근 10개 메시지를 기억 |
 | GET | `/api/chat/{conversationId}/stream?message=...` | 대화 기억 + SSE 스트리밍 |
+| POST | `/api/movies/review/llm` | 본문(`text/plain`)의 영화 리뷰를 LLM으로 분석해 `ReviewAnalysis`(장르·감정 점수·스포일러·확신도)로 받음 (`entity()`, 확신도는 null) |
+| POST | `/api/movies/review/jev` | 같은 리뷰를 Jev로 분석 (LLM에 형식을 부탁하는 대신 정해진 보기 중에서 고르게 하는 방식). `jev.enabled=false`(기본)면 503 |
 
 `/api/movies/*`의 쿼리 파라미터는 생략하면 위 예시 값이 기본값으로 쓰입니다.
 `http/movie.http`, `http/memory-chat.http`에서 IntelliJ HTTP Client로 바로 호출해 볼 수 있습니다.
+`review-compare.sh`는 `REVIEW.md`의 테스트 리뷰 6건을 두 리뷰 분석 엔드포인트에 차례로 보내 결과를 나란히 보여 줍니다 (앱을 띄운 뒤 `./review-compare.sh`, Jev를 켜지 않았다면 Jev 쪽은 503).
 
 SSE 응답에는 `charset`이 붙지 않아 IntelliJ HTTP Client가 한글을 ISO-8859-1로 읽어 깨뜨립니다.
 그래서 ch4는 `spring.servlet.encoding.force-response: true`로 응답에 `charset=UTF-8`을 붙입니다
