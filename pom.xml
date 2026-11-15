@@ -18,7 +18,7 @@
     <description>Section 5 — Prompt Engineering 실습</description>
 
     <properties>
-        <java.version>17</java.version>
+        <java.version>25</java.version>
         <!-- [Week 0 검증 대상] 촬영 시점의 최신 1.x GA 버전으로 갱신 -->
         <spring-ai.version>2.0.0</spring-ai.version>
     </properties>
