@@ -19,10 +19,12 @@ Spring AI 강의 실습 코드를 챕터별 프로젝트로 정리한 저장소�
 spring-ai-part1/
 ├── Java/
 │   ├── ch3_begin/     # Java 원본
-│   └── ch4_begin/
+│   ├── ch4_begin/
+│   └── ch5_begin/
 └── Kotlin/
     ├── ch3_begin/     # Java 원본을 Kotlin으로 변환
-    └── ch4_begin/
+    ├── ch4_begin/
+    └── ch5_begin/
 ```
 
 | 폴더 | 언어 | 챕터 | 내용 |
@@ -31,6 +33,8 @@ spring-ai-part1/
 | [Kotlin/ch3_begin](Kotlin/ch3_begin) | Kotlin | ch3 | 위 Java 프로젝트의 Kotlin 변환본 (동일한 API) |
 | [Java/ch4_begin](Java/ch4_begin) | Java | ch4 | ChatModel 심화 — 구조화된 출력(`entity()`로 record·List 매핑, 문자열 JSON 함정과 대응), 대화 기억(`ChatMemory` + 스트리밍), 리뷰 분석 비교(LLM `entity()` vs Jev) |
 | [Kotlin/ch4_begin](Kotlin/ch4_begin) | Kotlin | ch4 | 위 Java 프로젝트의 Kotlin 변환본 (동일한 API, Kotlin답게 다듬음) |
+| [Java/ch5_begin](Java/ch5_begin) | Java | ch5 | 프롬프트 엔지니어링 — Before/After 품질 비교, System/User 역할 분리, PromptTemplate·외부 프롬프트 파일, Zero/Few-shot·CoT, 프롬프트 인젝션 3중 방어, 한국어 프롬프트 전략, V1~V4 프롬프트 실험 (실습 진행 중) |
+| [Kotlin/ch5_begin](Kotlin/ch5_begin) | Kotlin | ch5 | 위 Java 프로젝트의 Kotlin 변환본 (동일한 API, Kotlin답게 다듬음) |
 
 각 폴더는 독립된 Maven 프로젝트입니다. IntelliJ에서는 폴더 안의 `pom.xml`을 프로젝트로 열면 됩니다.
 
@@ -80,6 +84,24 @@ ch4 Kotlin에서 추가로 다듬은 점 (외부 동작은 Java와 동일):
 - `MemoryChatService`: 일반 호출과 스트리밍의 요청 구성(대화 ID 지정)을 private 함수 하나로 모음
 - 로그는 `.also { }`로 반환 흐름 안에서 처리, 사용하지 않는 import 제거
 - `pom.xml`: `kotlin.version`을 직접 고정하지 않고 Spring Boot BOM 관리값 사용
+
+#### ch5
+
+| Java | Kotlin |
+|---|---|
+| 텍스트 블록 `"""..."""` + `formatted(article)` | `"""...""".textBlock().format(article)` — `textBlock()`은 `trimIndent()`에 줄 끝 공백 제거와 끝 줄바꿈을 더한 확장 함수로, 프롬프트를 Java와 글자 단위로 같게 맞춤. 값을 `$article`로 직접 넣으면 여러 줄 값의 들여쓰기까지 `trimIndent()` 계산에 섞이므로 `%s` 자리에 넣음 |
+| 필드 `@Value("classpath:/prompts/...") private Resource r;` | 생성자 파라미터 `@param:Value(...) private val r: Resource` — `-Xannotation-default-target=param-property`에서는 그냥 `@Value`를 쓰면 final 필드에도 붙어 Spring이 한 번 더 주입하므로 파라미터에만 붙임 |
+| `public static final String SAMPLE_ARTICLE = """..."""` | `companion object`의 `val SAMPLE_ARTICLE` (`textBlock()` 호출이 있어 `const`가 아님) |
+| `Pattern.compile(..., CASE_INSENSITIVE)` | 그대로 `Pattern` 사용 — Kotlin `Regex(..., IGNORE_CASE)`는 `UNICODE_CASE`를 덧붙여 인젝션 패턴 판정이 달라질 수 있음. 패턴은 raw string으로 이중 이스케이프 없이 작성 |
+| `Map.of("question", q, "answer", a)` | `mapOf("question" to q, "answer" to checkNotNull(a))` — 키 순서가 선언 순서로 고정 (Java `Map.of`는 실행마다 다름, 내용은 같음). Java `Map.of`처럼 답변이 null이면 500 |
+| `PromptRunner.Result(String answer, Long totalTokens)` | `Result(answer: String?, totalTokens: Long)` — Spring AI 2.x `Usage`는 `@NullMarked` 패키지라 토큰 수가 non-null (사용량이 없으면 0) |
+| begin 빈자리: `String zeroPrompt = null;`을 그대로 `runner`에 넘김 | `checkNotNull(zeroPrompt) { ... }`로 넘김 — 같은 지점에서 예외 (Java는 `Assert.hasText`의 IAE, Kotlin은 ISE, 둘 다 500) |
+
+ch5 Kotlin에서 추가로 다듬은 점 (외부 동작은 Java와 동일):
+
+- `PromptRunner`: 요청 구성만 다른 4개 메서드의 호출·응답 확인을 private 함수 하나로 모음. `chatResponse()`/`getResult()`가 null이면 원인 메시지를 남김 (Java는 NPE, 둘 다 500)
+- `PromptQualityService`: 같은 시스템 문구 3곳을 상수 하나로
+- `TechniqueController.cheatsheet()`: 고정 내용이라 한 번만 만들어 재사용 (Java는 호출마다 생성)
 
 ## 실행 방법
 
@@ -170,6 +192,31 @@ ch3은 시작할 때 `AiRunner`가 샘플 질문을 한 번 보내고 답변을 
 SSE 응답에는 `charset`이 붙지 않아 IntelliJ HTTP Client가 한글을 ISO-8859-1로 읽어 깨뜨립니다.
 그래서 ch4는 `spring.servlet.encoding.force-response: true`로 응답에 `charset=UTF-8`을 붙입니다
 (Spring Boot 4에서는 예전 이름 `server.servlet.encoding.*`가 동작하지 않습니다).
+
+#### ch5
+
+모든 엔드포인트는 `GET`이고 `/api/s05` 아래에 있습니다. 쿼리 파라미터를 생략하면 코드에 정한 예시 값이 기본값으로 쓰입니다.
+
+| 경로 | 설명 |
+|---|---|
+| `/quality/summary?article=...` | "이 기사 요약해줘" vs 역할·형식·제약을 명시한 프롬프트의 답변·토큰 수 비교 (기사 생략 시 예시 기사) |
+| `/role/separated?question=...` | system(Spring 전문가 규칙) / user(질문) 채널을 나눠 호출 |
+| `/role/anti-pattern?question=...` | 안티패턴(규칙과 질문을 한 덩어리로) vs 채널 분리 비교 |
+| `/system-prompt/customer-center?company=...&question=...` | 4요소(역할·형식·제약·톤) 시스템 프롬프트 파일로 만든 고객센터 봇 |
+| `/system-prompt/out-of-policy?company=...&question=...` | 정책에 없는 질문으로 제약의 효과 확인 |
+| `/template/travel/concat` · `/template/travel` · `/template/travel/custom` | 문자열 연결(+) vs `PromptTemplate` 변수 바인딩, 템플릿 재사용 |
+| `/template/prompt-file` | 현재 로딩된 `prompts/system.st` 원문 |
+| `/template/chat/raw` · `/template/chat?service=...` | 프롬프트 파일을 `system()`에 그대로 전달({service} 미치환) vs 바인딩 후 전달 |
+| `/technique/zero-shot` · `/technique/few-shot` · `/technique/shot/compare` | 감성 분류 Zero-shot vs Few-shot |
+| `/technique/cot/compare?problem=...` | Chain-of-Thought 유무 비교 |
+| `/technique/cheatsheet` | 증상별 프롬프트 기법 처방표. OpenAI 호출 없음 |
+| `/injection/defense?userInput=...` · `/injection/defense/benign` | 프롬프트 인젝션 3중 방어(입력 검증 → 시스템 프롬프트 방어 → 출력 검증) 판정과 오탐 점검 |
+| `/korean/ab-test` · `/korean/system-diet` · `/korean/output-language` | 한국어 vs 영어 지시 A/B, 시스템 프롬프트 길이(고정비), 출력 언어 명시 유무 |
+| `/lab/prompt-versions?article=...&runs=3` | 같은 기사로 V1~V4 프롬프트를 각 1~3회 실행 (최대 12회 호출) |
+
+ch5는 강의를 따라 실습하는 중이라, 아직 채우지 않은 엔드포인트는 빈 본문(200)을 돌려줍니다.
+지금 동작하는 것은 `/quality/summary`, `/role/separated`, `/role/anti-pattern`, `/technique/cheatsheet`입니다.
+`http/section5-prompt-engineering.http`에서 IntelliJ HTTP Client로 바로 호출해 볼 수 있습니다.
 
 ## 참고
 
