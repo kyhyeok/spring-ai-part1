@@ -20,3 +20,22 @@ GET {{host}}/api/movies/raw-json-fixed?title=기생충
 
 ### entity()가 자동으로 붙이는 포맷 지시문(JSON 스키마) 확인 (MovieController#format) - OpenAI 호출 없음
 GET {{host}}/api/movies/format
+
+### 리뷰 분석 - LLM (MovieController#reviewLlm) - entity()로 ReviewAnalysis 매핑, confidence는 null
+POST {{host}}/api/movies/review/llm
+Content-Type: text/plain; charset=UTF-8
+
+가족이랑 보면서 내내 웃었어요. 배우들 호흡이 좋아서 시간 가는 줄 몰랐네요.
+
+### 리뷰 분석 - LLM (MovieController#reviewLlm) - 결말을 드러내는 스포일러 리뷰
+POST {{host}}/api/movies/review/llm
+Content-Type: text/plain; charset=UTF-8
+
+마지막 반전에서 범인이 사실 주인공의 형이었다는 게 밝혀질 때 소름이 돋았다. 두 시간 내내 긴장을 놓을 수 없었던 최고의 스릴러
+
+### 리뷰 분석 - Jev (MovieController#reviewJev) - 위와 같은 리뷰로 LLM 결과와 비교
+# JEV_ENABLED=true가 아니면 503(jev.enabled=false). 실제 호출에는 TYPESAFE_API_KEY 환경변수도 필요
+POST {{host}}/api/movies/review/jev
+Content-Type: text/plain; charset=UTF-8
+
+마지막 반전에서 범인이 사실 주인공의 형이었다는 게 밝혀질 때 소름이 돋았다. 두 시간 내내 긴장을 놓을 수 없었던 최고의 스릴러

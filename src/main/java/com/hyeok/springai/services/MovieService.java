@@ -17,7 +17,7 @@ public interface MovieService {
 
     String describeFormat();
 
-//    ReviewAnalysis analyzeReviewWithLlm(String review);
-//
-//    ReviewAnalysis analyzeReviewWithJev(String review);
+   ReviewAnalysis analyzeReviewWithLlm(String review);
+
+   ReviewAnalysis analyzeReviewWithJev(String review);
 }
