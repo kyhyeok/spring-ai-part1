@@ -1,6 +1,7 @@
 package com.example.prompts.service;
 
 import com.example.prompts.dto.BeforeAfterResponse;
+
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -18,33 +19,38 @@ import java.util.Map;
 @Service
 public class SentimentClassifyService {
 
-    private final PromptRunner runner;
+	private final PromptRunner runner;
 
-    @Value("classpath:/prompts/few-shot-sentiment.st")
-    private Resource fewShotResource;
+	@Value("classpath:/prompts/few-shot-sentiment.st")
+	private Resource fewShotResource;
 
-    public SentimentClassifyService(PromptRunner runner) {
-        this.runner = runner;
-    }
+	public SentimentClassifyService(PromptRunner runner) {
+		this.runner = runner;
+	}
 
-    /** Zero-shot — 지시만으로 수행 */
-    public String zeroShot(String review) {
-        return null;
-    }
+	/** Zero-shot — 지시만으로 수행 */
+	public String zeroShot(String review) {
+		return runner.user("다음 리뷰의 감성을 분류하세요. \n\n리뷰: " + review);
+	}
 
-    /** Few-shot — 예시 2개로 출력 형식을 고정 (슬라이드 프롬프트 그대로) */
-    public String fewShot(String review) {
-        return null;
-    }
+	/** Few-shot — 예시 2개로 출력 형식을 고정 (슬라이드 프롬프트 그대로) */
+	public String fewShot(String review) {
+		String prompt = new PromptTemplate(fewShotResource).render(Map.of("review", review));
+		return runner.user(prompt);
+	}
 
-    /** 두 방식을 나란히 — 출력이 예시의 형식에 수렴하는 것을 확인 */
-    public BeforeAfterResponse compare(String review) {
-        String zeroPrompt = null;
-        String fewPrompt = null;
+	/** 두 방식을 나란히 — 출력이 예시의 형식에 수렴하는 것을 확인 */
+	public BeforeAfterResponse compare(String review) {
+		String zeroPrompt = "다음 리뷰의 감성을 분류하세요. \n\n리뷰: " + review;
+		String fewPrompt = new PromptTemplate(fewShotResource).render(Map.of("review", review));
 
-        var z = runner.userWithTokens(zeroPrompt);
-        var f = runner.userWithTokens(fewPrompt);
+		var z = runner.userWithTokens(zeroPrompt);
+		var f = runner.userWithTokens(fewPrompt);
 
-        return null;
-    }
+		return new BeforeAfterResponse(
+			"Zero-shot vs Few shot (감성 분류)",
+			"Zero-shot - 지시만", zeroPrompt, z.answer(), z.totalTokens(),
+			"Few-shot - 예시 2개", fewPrompt, f.answer(), f.totalTokens()
+		);
+	}
 }
