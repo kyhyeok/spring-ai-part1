@@ -8,7 +8,11 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
-/** Zero-shot vs Few-shot · CoT · 기법 선택 치트시트 */
+/**
+ * Zero-shot vs Few-shot · CoT · 기법 선택 치트시트
+ *
+ * 응답 Map은 mapOf로 만들어 JSON 키가 선언 순서 그대로 나간다 (Java Map.of는 실행마다 순서가 다를 수 있음, 내용은 같음).
+ */
 @RestController
 @RequestMapping("/api/s05/technique")
 class TechniqueController(
@@ -20,19 +24,25 @@ class TechniqueController(
     @GetMapping("/zero-shot")
     fun zeroShot(
         @RequestParam(defaultValue = "가격 대비 성능은 괜찮은데 배터리가 하루도 못 갑니다") review: String,
-    ): Map<String, String>? = null
+    ): Map<String, String> = mapOf(
+        "review" to review,
+        "answer" to checkAnswer(sentimentService.zeroShot(review)),
+    )
 
     /** Few-shot — 한 단어 출력으로 수렴 */
     @GetMapping("/few-shot")
     fun fewShot(
         @RequestParam(defaultValue = "가격 대비 성능은 괜찮은데 배터리가 하루도 못 갑니다") review: String,
-    ): Map<String, String>? = null
+    ): Map<String, String> = mapOf(
+        "review" to review,
+        "answer" to checkAnswer(sentimentService.fewShot(review)),
+    )
 
     /** 나란히 비교 — "예시가 곧 사양(Spec)" */
     @GetMapping("/shot/compare")
     fun shotCompare(
         @RequestParam(defaultValue = "가격 대비 성능은 괜찮은데 배터리가 하루도 못 갑니다") review: String,
-    ): BeforeAfterResponse? = null
+    ): BeforeAfterResponse = sentimentService.compare(review)
 
     /** CoT 유/무 비교 — 조건 3개 이상이 얽힌 판단 */
     @GetMapping("/cot/compare")
@@ -41,6 +51,9 @@ class TechniqueController(
     /** 기법 선택 치트시트 — 증상으로 찾아 쓰는 처방전 (다운로드 자료와 동일 내용) */
     @GetMapping("/cheatsheet")
     fun cheatsheet(): List<Map<String, String>> = CHEATSHEET
+
+    // Java의 Map.of는 null 값을 받지 않아 답변이 null이면 NPE(500)가 난다. 같은 동작을 위해 null이면 예외
+    private fun checkAnswer(answer: String?): String = checkNotNull(answer) { "답변이 없습니다" }
 
     companion object {
         // 내용이 고정이라 한 번만 만든다.

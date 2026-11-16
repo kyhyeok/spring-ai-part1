@@ -1,6 +1,7 @@
 package com.example.prompts.service
 
 import com.example.prompts.dto.BeforeAfterResponse
+import org.springframework.ai.chat.prompt.PromptTemplate
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.io.Resource
 import org.springframework.stereotype.Service
@@ -20,20 +21,29 @@ class SentimentClassifyService(
 ) {
 
     /** Zero-shot — 지시만으로 수행 */
-    fun zeroShot(review: String): String? = null
+    fun zeroShot(review: String): String? = runner.user(zeroShotPrompt(review))
 
     /** Few-shot — 예시 2개로 출력 형식을 고정 (슬라이드 프롬프트 그대로) */
-    fun fewShot(review: String): String? = null
+    fun fewShot(review: String): String? = runner.user(fewShotPrompt(review))
 
     /** 두 방식을 나란히 — 출력이 예시의 형식에 수렴하는 것을 확인 */
-    fun compare(review: String): BeforeAfterResponse? {
-        // begin 코드의 빈자리: 프롬프트가 아직 비어 있어, Java와 같이 첫 호출에서 예외가 난다
-        val zeroPrompt: String? = null
-        val fewPrompt: String? = null
+    fun compare(review: String): BeforeAfterResponse {
+        val zeroPrompt = zeroShotPrompt(review)
+        val fewPrompt = fewShotPrompt(review)
 
-        val z = runner.userWithTokens(checkNotNull(zeroPrompt) { "zeroPrompt가 비어 있습니다" })
-        val f = runner.userWithTokens(checkNotNull(fewPrompt) { "fewPrompt가 비어 있습니다" })
+        val z = runner.userWithTokens(zeroPrompt)
+        val f = runner.userWithTokens(fewPrompt)
 
-        return null
+        return BeforeAfterResponse(
+            "Zero-shot vs Few shot (감성 분류)",
+            "Zero-shot - 지시만", zeroPrompt, z.answer, z.totalTokens,
+            "Few-shot - 예시 2개", fewPrompt, f.answer, f.totalTokens,
+        )
     }
+
+    // 단독 호출(zeroShot·fewShot)과 비교(compare)가 같은 프롬프트를 쓰므로 만드는 곳을 하나로 둔다
+    private fun zeroShotPrompt(review: String): String = "다음 리뷰의 감성을 분류하세요. \n\n리뷰: $review"
+
+    private fun fewShotPrompt(review: String): String =
+        PromptTemplate(fewShotResource).render(mapOf("review" to review))
 }
