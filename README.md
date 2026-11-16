@@ -93,10 +93,9 @@ ch4 Kotlin에서 추가로 다듬은 점 (외부 동작은 Java와 동일):
 | 필드 `@Value("classpath:/prompts/...") private Resource r;` | 생성자 파라미터 `@param:Value(...) private val r: Resource` — `-Xannotation-default-target=param-property`에서는 그냥 `@Value`를 쓰면 final 필드에도 붙어 Spring이 한 번 더 주입하므로 파라미터에만 붙임 |
 | `public static final String SAMPLE_ARTICLE = """..."""` | `companion object`의 `val SAMPLE_ARTICLE` (`textBlock()` 호출이 있어 `const`가 아님) |
 | `Pattern.compile(..., CASE_INSENSITIVE)` | 그대로 `Pattern` 사용 — Kotlin `Regex(..., IGNORE_CASE)`는 `UNICODE_CASE`를 덧붙여 인젝션 패턴 판정이 달라질 수 있음. 패턴은 raw string으로 이중 이스케이프 없이 작성 |
-| `Map.of("question", q, "answer", a)` (`/role/separated`, `/system-prompt/*`, `/template/*`) | `mapOf("question" to q, "answer" to checkAnswer(a))` — 키 순서가 선언 순서로 고정 (Java `Map.of`는 실행마다 다름, 내용은 같음). `checkAnswer()`는 Java `Map.of`처럼 답변이 null이면 500이 나도록 맞춘 private 함수 |
+| `Map.of("question", q, "answer", a)` (`/role/separated`, `/system-prompt/*`, `/template/*`, `/technique/zero-shot`·`/few-shot`) | `mapOf("question" to q, "answer" to checkAnswer(a))` — 키 순서가 선언 순서로 고정 (Java `Map.of`는 실행마다 다름, 내용은 같음). `checkAnswer()`는 Java `Map.of`처럼 답변이 null이면 500이 나도록 맞춘 private 함수 |
 | 대비용 예제 `"당신은 " + role + "입니다.\n" + ...` (`/template/travel/concat`) | 그대로 `+` 연결 — "문자열 연결 vs 템플릿"을 보여 주는 강의 예제라 Kotlin 문자열 템플릿(`"$role"`)으로 바꾸지 않음. 줄 끝에 `+`를 둬야 다음 줄과 한 식으로 이어짐 |
 | `PromptRunner.Result(String answer, Long totalTokens)` | `Result(answer: String?, totalTokens: Long)` — Spring AI 2.x `Usage`는 `@NullMarked` 패키지라 토큰 수가 non-null (사용량이 없으면 0) |
-| begin 빈자리: `String zeroPrompt = null;`을 그대로 `runner`에 넘김 | `checkNotNull(zeroPrompt) { ... }`로 넘김 — 같은 지점에서 예외 (Java는 `Assert.hasText`의 IAE, Kotlin은 ISE, 둘 다 500) |
 
 ch5 Kotlin에서 추가로 다듬은 점 (외부 동작은 Java와 동일):
 
@@ -104,6 +103,7 @@ ch5 Kotlin에서 추가로 다듬은 점 (외부 동작은 Java와 동일):
 - `PromptQualityService`: 같은 시스템 문구 3곳을 상수 하나로
 - `TechniqueController.cheatsheet()`: 고정 내용이라 한 번만 만들어 재사용 (Java는 호출마다 생성)
 - `TravelService`: `recommend`·`recommendCustom`이 같은 템플릿을 쓰므로 템플릿 문구는 상수 하나, 바인딩·호출은 private 함수 하나로 모음 (Java는 같은 텍스트 블록이 두 번). `PromptTemplate`은 가변 객체라 공유하지 않고 호출마다 만듦
+- `SentimentClassifyService`: 단독 호출(`zeroShot`·`fewShot`)과 비교(`compare`)가 같은 프롬프트를 쓰므로 Zero-shot 문구와 Few-shot 렌더링을 private 함수 하나씩으로 모음 (Java는 같은 문자열·렌더링이 두 곳에)
 
 ## 실행 방법
 
@@ -217,7 +217,7 @@ SSE 응답에는 `charset`이 붙지 않아 IntelliJ HTTP Client가 한글을 IS
 | `/lab/prompt-versions?article=...&runs=3` | 같은 기사로 V1~V4 프롬프트를 각 1~3회 실행 (최대 12회 호출) |
 
 ch5는 강의를 따라 실습하는 중이라, 아직 채우지 않은 엔드포인트는 빈 본문(200)을 돌려줍니다.
-지금 동작하는 것은 `/quality/summary`, `/role/separated`, `/role/anti-pattern`, `/system-prompt/customer-center`, `/system-prompt/out-of-policy`, `/template/*`(6개), `/technique/cheatsheet`입니다.
+지금 동작하는 것은 `/quality/summary`, `/role/separated`, `/role/anti-pattern`, `/system-prompt/customer-center`, `/system-prompt/out-of-policy`, `/template/*`(6개), `/technique/zero-shot`, `/technique/few-shot`, `/technique/shot/compare`, `/technique/cheatsheet`입니다.
 `http/section5-prompt-engineering.http`에서 IntelliJ HTTP Client로 바로 호출해 볼 수 있습니다.
 
 ## 참고
