@@ -46,7 +46,8 @@ class TechniqueController(
 
     /** CoT 유/무 비교 — 조건 3개 이상이 얽힌 판단 */
     @GetMapping("/cot/compare")
-    fun cotCompare(@RequestParam(required = false) problem: String?): BeforeAfterResponse? = null
+    fun cotCompare(@RequestParam(required = false) problem: String?): BeforeAfterResponse =
+        reasoningService.compare(problem ?: ReasoningService.SAMPLE_PROBLEM)
 
     /** 기법 선택 치트시트 — 증상으로 찾아 쓰는 처방전 (다운로드 자료와 동일 내용) */
     @GetMapping("/cheatsheet")

@@ -22,11 +22,18 @@ class ReasoningService(
     fun withCot(problem: String): String? = null
 
     /** 유/무 비교 — 중간 사고 과정이 드러나 검증 가능성이 올라가는 것을 확인 */
-    fun compare(problem: String): BeforeAfterResponse? {
+    fun compare(problem: String): BeforeAfterResponse {
         val withoutCotPrompt = "$problem\n답만 알려주세요."
         val withCotPrompt = "$problem\n단계별로 검토한 뒤 결론을 내세요."
 
-        return null
+        val withoutCotResult = runner.userWithTokens(withoutCotPrompt)
+        val withCotResult = runner.userWithTokens(withCotPrompt)
+
+        return BeforeAfterResponse(
+            "Chain-of-Thought",
+            "Cot 없음 - 결론만", withoutCotPrompt, withoutCotResult.answer, withoutCotResult.totalTokens,
+            "CoT 적용 - 단계별 검토", withCotPrompt, withCotResult.answer, withCotResult.totalTokens,
+        )
     }
 
     companion object {
