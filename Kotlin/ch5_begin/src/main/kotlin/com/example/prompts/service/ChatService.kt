@@ -2,6 +2,7 @@ package com.example.prompts.service
 
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.prompt.PromptTemplate
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.io.Resource
 import org.springframework.stereotype.Service
 
@@ -14,11 +15,11 @@ import org.springframework.stereotype.Service
  *  ③ 기획자·도메인 전문가와의 협업 지점 확보
  */
 @Service
-class ChatService(builder: ChatClient.Builder) {
-
-    // begin 코드의 빈자리: Java처럼 아직 주입 설정(@Value)이 없어 비어 있다.
-    // 그래서 currentSystemPrompt()는 Java와 같이 이 값을 쓰는 지점에서 예외가 난다.
-    private lateinit var systemResource: Resource
+class ChatService(
+    builder: ChatClient.Builder,
+    /** 시스템 프롬프트 파일 (@param: — 생성자 파라미터에만 주입) */
+    @param:Value("classpath:/prompts/system.st") private val systemResource: Resource,
+) {
 
     private val chatClient: ChatClient = builder.build()
 
@@ -26,13 +27,24 @@ class ChatService(builder: ChatClient.Builder) {
      * Resource를 system()에 직접 전달.
      * 이 경우 파일 안의 {service} 자리는 치환되지 않고 그대로 전달된다는 점을 시연에서 짚어준다.
      */
-    fun ask(question: String): String? = null
+    fun ask(question: String): String? =
+        chatClient.prompt()
+            .system(systemResource)
+            .user(question)
+            .call().content()
 
     /**
      * 실전형 — 파일의 {service} 변수를 바인딩한 뒤 전달.
      * PromptTemplate과 외부 파일 관리를 결합한 형태로, 실무에서 쓰는 조합이다.
      */
-    fun ask(service: String, question: String): String? = null
+    fun ask(service: String, question: String): String? {
+        val systemText = PromptTemplate(systemResource).render(mapOf("service" to service))
+
+        return chatClient.prompt()
+            .system(systemText)
+            .user(question)
+            .call().content()
+    }
 
     /** 현재 로딩된 프롬프트 파일 원문 확인 — "프롬프트도 리뷰 대상"임을 보여주는 용도 */
     fun currentSystemPrompt(): String = PromptTemplate(systemResource).template
