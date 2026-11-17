@@ -23,12 +23,22 @@ class PromptVersionLabService(
     fun run(article: String, runsPerVersion: Int): PromptVersionResult {
         val runs = runsPerVersion.coerceIn(1, 3)   // 과금 방어: 최대 3회
 
-        val versions = mutableListOf<PromptVersionResult.Version>()
+        val versions = listOf(
+            execute("V1", "기본", v1(article), runs),
+            execute("V2", "+역할", v2(article), runs),
+            execute("V3", "+형식/제약", v3(article), runs),
+            execute("V4", "+Few-shot", v4(article), runs),
+        )
 
         return PromptVersionResult(article, runs, versions)
     }
 
-    private fun execute(id: String, label: String, prompt: String, runs: Int): PromptVersionResult.Version? = null
+    private fun execute(id: String, label: String, prompt: String, runs: Int): PromptVersionResult.Version {
+        // Java는 회차마다 answer.length()를 구하므로 응답이 null이면 그 회차에서 NPE(500) — 같은 지점에서 실패시킨다
+        val answers = List(runs) { checkNotNull(runner.user(prompt)) { "모델 응답이 없습니다" } }
+
+        return PromptVersionResult.Version(id, label, prompt, answers, answers.map { it.length })
+    }
 
     // ── V1. 기본 ────────────────────────────────────────────────
     private fun v1(article: String): String = "이 기사 요약해줘\n\n$article"

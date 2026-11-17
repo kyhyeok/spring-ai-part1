@@ -3,6 +3,7 @@ package com.example.prompts.controller
 import com.example.prompts.dto.BeforeAfterResponse
 import com.example.prompts.dto.PromptVersionResult
 import com.example.prompts.service.KoreanPromptService
+import com.example.prompts.service.PromptQualityService
 import com.example.prompts.service.PromptVersionLabService
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -21,19 +22,19 @@ class KoreanAndLabController(
     @GetMapping("/korean/ab-test")
     fun abTest(
         @RequestParam(defaultValue = "MSA 환경에서 분산 트랜잭션을 다루는 방법") task: String,
-    ): BeforeAfterResponse? = null
+    ): BeforeAfterResponse = koreanService.languageAbTest(task)
 
     /** 시스템 프롬프트 다이어트 — 길이 = 고정비 */
     @GetMapping("/korean/system-diet")
     fun systemDiet(
         @RequestParam(defaultValue = "배송이 지연되면 보상이 있나요?") question: String,
-    ): BeforeAfterResponse? = null
+    ): BeforeAfterResponse = koreanService.systemPromptDiet(question)
 
     /** 출력 언어 명시 유무 — "운에 맡기지 말 것" */
     @GetMapping("/korean/output-language")
     fun outputLanguage(
         @RequestParam(defaultValue = "Explain the CAP theorem briefly.") question: String,
-    ): Map<String, String?>? = null
+    ): Map<String, String?> = koreanService.outputLanguage(question)
 
     /**
      * 실습 — 같은 과제, 4개의 Prompt를 각 3회 실행.
@@ -43,5 +44,5 @@ class KoreanAndLabController(
     fun promptVersions(
         @RequestParam(required = false) article: String?,
         @RequestParam(defaultValue = "3") runs: Int,
-    ): PromptVersionResult? = null
+    ): PromptVersionResult = labService.run(article ?: PromptQualityService.SAMPLE_ARTICLE, runs)
 }
