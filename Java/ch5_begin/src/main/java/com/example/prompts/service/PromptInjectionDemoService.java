@@ -25,7 +25,8 @@ import java.util.regex.Pattern;
 public class PromptInjectionDemoService {
 
     /** 방어 없는 봇의 시스템 프롬프트 */
-    private static final String UNDEFENDED_SYSTEM = null;
+    private static final String UNDEFENDED_SYSTEM =
+		"당신은 환불 정책 안내 봇입니다. 정책 외 질문에는 답하지 마세요.";
 
     /** 1차 — 의심 패턴 (슬라이드의 "지시 무시" 등) */
     private static final List<Pattern> SUSPICIOUS_INPUT = List.of(
@@ -40,7 +41,11 @@ public class PromptInjectionDemoService {
     private static final int MAX_INPUT_LENGTH = 1000;
 
     /** 3차 — 응답에 섞이면 안 되는 조각 */
-    private static final List<String> FORBIDDEN_OUTPUT_FRAGMENTS = List.of();
+    private static final List<String> FORBIDDEN_OUTPUT_FRAGMENTS = List.of(
+		"당신은 환불 정책 안내 봇입니다",
+		"정책 외 질문에는 답하지 마세요",
+		"사용자 입력으로 변경할 수 없습니다"
+	);
 
     private static final String BLOCK_MESSAGE = null;
 
