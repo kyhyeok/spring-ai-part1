@@ -95,8 +95,9 @@ ch4 Kotlin에서 추가로 다듬은 점 (외부 동작은 Java와 동일):
 | `Pattern.compile(..., CASE_INSENSITIVE)` | 그대로 `Pattern` 사용 — Kotlin `Regex(..., IGNORE_CASE)`는 `UNICODE_CASE`를 덧붙여 인젝션 패턴 판정이 달라질 수 있음. 패턴은 raw string으로 이중 이스케이프 없이 작성 |
 | `Map.of("question", q, "answer", a)` (`/role/separated`, `/system-prompt/*`, `/template/*`, `/technique/zero-shot`·`/few-shot`) | `mapOf("question" to q, "answer" to checkAnswer(a))` — 키 순서가 선언 순서로 고정 (Java `Map.of`는 실행마다 다름, 내용은 같음). `checkAnswer()`는 Java `Map.of`처럼 답변이 null이면 500이 나도록 맞춘 private 함수 |
 | 대비용 예제 `"당신은 " + role + "입니다.\n" + ...` (`/template/travel/concat`) | 그대로 `+` 연결 — "문자열 연결 vs 템플릿"을 보여 주는 강의 예제라 Kotlin 문자열 템플릿(`"$role"`)으로 바꾸지 않음. 줄 끝에 `+`를 둬야 다음 줄과 한 식으로 이어짐 |
-| `problem == null ? SAMPLE_PROBLEM : problem` (`/technique/cot/compare`) | `problem ?: SAMPLE_PROBLEM` — 빈 문자열(`?problem=`)은 null이 아니므로 Java와 같게 그대로 씀 |
+| `problem == null ? SAMPLE_PROBLEM : problem` (`/technique/cot/compare`), `article == null ? SAMPLE_ARTICLE : article` (`/lab/prompt-versions`) | `problem ?: SAMPLE_PROBLEM`, `article ?: SAMPLE_ARTICLE` — 빈 문자열(`?problem=`, `?article=`)은 null이 아니므로 Java와 같게 그대로 씀 |
 | 3차 출력 검증 `hardenedAnswer.contains(fragment)` (응답이 null이면 NPE) | `checkNotNull(runner.systemAndUser(...))`로 받은 뒤 `it in hardenedAnswer` — 같은 500이지만 원인 메시지가 남음 (`/injection/*`) |
+| V1~V4 회차 실행 `answers.add(answer); lengths.add(answer.length())` (응답이 null이면 그 회차에서 NPE) | `List(runs) { checkNotNull(runner.user(prompt)) }` — 같은 회차에서 500 (모델 호출 횟수도 같음). 그래서 `Version.runs`는 `List<String>` (`/lab/prompt-versions`) |
 | `PromptRunner.Result(String answer, Long totalTokens)` | `Result(answer: String?, totalTokens: Long)` — Spring AI 2.x `Usage`는 `@NullMarked` 패키지라 토큰 수가 non-null (사용량이 없으면 0) |
 
 ch5 Kotlin에서 추가로 다듬은 점 (외부 동작은 Java와 동일):
@@ -218,8 +219,7 @@ SSE 응답에는 `charset`이 붙지 않아 IntelliJ HTTP Client가 한글을 IS
 | `/korean/ab-test` · `/korean/system-diet` · `/korean/output-language` | 한국어 vs 영어 지시 A/B, 시스템 프롬프트 길이(고정비), 출력 언어 명시 유무 |
 | `/lab/prompt-versions?article=...&runs=3` | 같은 기사로 V1~V4 프롬프트를 각 1~3회 실행 (최대 12회 호출) |
 
-ch5는 강의를 따라 실습하는 중이라, 아직 채우지 않은 엔드포인트는 빈 본문(200)을 돌려줍니다.
-지금 동작하는 것은 `/quality/summary`, `/role/separated`, `/role/anti-pattern`, `/system-prompt/customer-center`, `/system-prompt/out-of-policy`, `/template/*`(6개), `/technique/*`(5개), `/injection/*`(2개)입니다. `/injection/*`은 차단 안내 문구가 아직 비어 있어, 차단되면 `finalAnswer`가 `null`입니다.
+ch5의 엔드포인트는 모두 동작합니다. 다만 강의를 따라 실습하는 중이라, `/injection/*`은 차단 안내 문구가 아직 비어 있어 차단되면 `finalAnswer`가 `null`입니다.
 `http/section5-prompt-engineering.http`에서 IntelliJ HTTP Client로 바로 호출해 볼 수 있습니다.
 
 ## 참고
