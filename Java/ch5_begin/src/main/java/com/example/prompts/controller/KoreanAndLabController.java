@@ -27,21 +27,21 @@ public class KoreanAndLabController {
     @GetMapping("/korean/ab-test")
     public BeforeAfterResponse abTest(
             @RequestParam(defaultValue = "MSA 환경에서 분산 트랜잭션을 다루는 방법") String task) {
-        return null;
+        return koreanService.languageAbTest(task);
     }
 
     /** 시스템 프롬프트 다이어트 — 길이 = 고정비 */
     @GetMapping("/korean/system-diet")
     public BeforeAfterResponse systemDiet(
             @RequestParam(defaultValue = "배송이 지연되면 보상이 있나요?") String question) {
-        return null;
+        return koreanService.systemPromptDiet(question);
     }
 
     /** 출력 언어 명시 유무 — "운에 맡기지 말 것" */
     @GetMapping("/korean/output-language")
     public Map<String, String> outputLanguage(
             @RequestParam(defaultValue = "Explain the CAP theorem briefly.") String question) {
-        return null;
+        return koreanService.outputLanguage(question);
     }
 
     /**
@@ -52,6 +52,8 @@ public class KoreanAndLabController {
     public PromptVersionResult promptVersions(
             @RequestParam(required = false) String article,
             @RequestParam(defaultValue = "3") int runs) {
-        return null;
+        return labService.run(
+			article == null ? PromptQualityService.SAMPLE_ARTICLE : article, runs
+		);
     }
 }

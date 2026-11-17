@@ -31,13 +31,25 @@ public class PromptVersionLabService {
         int runs = Math.max(1, Math.min(runsPerVersion, 3));   // 과금 방어: 최대 3회
 
         List<PromptVersionResult.Version> versions = new ArrayList<>();
-
+		versions.add(execute("V1", "기본", v1(article), runs));
+		versions.add(execute("V2", "+역할", v2(article), runs));
+		versions.add(execute("V3", "+형식/제약", v3(article), runs));
+		versions.add(execute("V4", "+Few-shot", v4(article), runs));
 
         return new PromptVersionResult(article, runs, versions);
     }
 
     private PromptVersionResult.Version execute(String id, String label, String prompt, int runs) {
-        return null;
+		List<String> answers = new ArrayList<>();
+		List<Integer> lengths = new ArrayList<>();
+
+		for (int i = 0; i < runs; i++) {
+			String answer = runner.user(prompt);
+			answers.add(answer);
+			lengths.add(answer.length());
+		}
+
+        return new PromptVersionResult.Version(id, label, prompt, answers, lengths);
     }
 
     // ── V1. 기본 ────────────────────────────────────────────────
