@@ -14,7 +14,7 @@ data class PromptVersionResult(
         val id: String,             // V1 ~ V4
         val label: String,          // 기본 / +역할 / +형식·제약 / +Few-shot
         val prompt: String,         // 실제 전송된 프롬프트 원문
-        val runs: List<String?>,    // 각 회차 응답 (Spring AI 응답이 @Nullable)
+        val runs: List<String>,     // 각 회차 응답 (응답이 null이면 Java처럼 500이라 여기엔 null이 없음)
         val lengths: List<Int>,     // 회차별 글자 수 — 분량 준수 판단에 사용
     )
 }
