@@ -11,7 +11,8 @@ Spring AI 강의 실습 코드를 챕터별 프로젝트로 정리한 저장소�
 | Kotlin | 2.3.21 (Spring Boot 4.1.2 관리 버전) |
 | Spring Boot | 4.1.2 |
 | Spring AI | 2.0.2 (OpenAI) |
-| Maven | 3.9.16 (Maven Wrapper 포함) |
+| Maven | 3.9.16 (Maven Wrapper 포함, ch3~ch5) |
+| Gradle | 9.7.0 (Gradle Wrapper 포함, ch6~) |
 
 ## 프로젝트 구성
 
@@ -20,11 +21,13 @@ spring-ai-part1/
 ├── Java/
 │   ├── ch3_begin/     # Java 원본
 │   ├── ch4_begin/
-│   └── ch5_begin/
+│   ├── ch5_begin/
+│   └── ch6_begin/
 └── Kotlin/
     ├── ch3_begin/     # Java 원본을 Kotlin으로 변환
     ├── ch4_begin/
-    └── ch5_begin/
+    ├── ch5_begin/
+    └── ch6_begin/
 ```
 
 | 폴더 | 언어 | 챕터 | 내용 |
@@ -35,8 +38,11 @@ spring-ai-part1/
 | [Kotlin/ch4_begin](Kotlin/ch4_begin) | Kotlin | ch4 | 위 Java 프로젝트의 Kotlin 변환본 (동일한 API, Kotlin답게 다듬음) |
 | [Java/ch5_begin](Java/ch5_begin) | Java | ch5 | 프롬프트 엔지니어링 — Before/After 품질 비교, System/User 역할 분리, PromptTemplate·외부 프롬프트 파일, Zero/Few-shot·CoT, 프롬프트 인젝션 3중 방어, 한국어 프롬프트 전략, V1~V4 프롬프트 실험 (실습 진행 중) |
 | [Kotlin/ch5_begin](Kotlin/ch5_begin) | Kotlin | ch5 | 위 Java 프로젝트의 Kotlin 변환본 (동일한 API, Kotlin답게 다듬음) |
+| [Java/ch6_begin](Java/ch6_begin) | Java | ch6 | RAG 개념과 Vector Store 기초 — 개념 확인용 CLI 데모 3종: 임베딩 유사도(코사인), 청크 크기 비교, 미니 RAG(`SimpleVectorStore`) (실습 진행 중) |
+| [Kotlin/ch6_begin](Kotlin/ch6_begin) | Kotlin | ch6 | 위 Java 프로젝트의 Kotlin 변환본 (같은 데모·출력, Kotlin답게 다듬음) |
 
-각 폴더는 독립된 Maven 프로젝트입니다. IntelliJ에서는 폴더 안의 `pom.xml`을 프로젝트로 열면 됩니다.
+각 폴더는 독립된 프로젝트입니다. ch3~ch5는 Maven, ch6부터는 Gradle을 씁니다.
+IntelliJ에서는 폴더 안의 `pom.xml`(Maven) 또는 `build.gradle`·`build.gradle.kts`(Gradle)를 프로젝트로 열면 됩니다.
 
 ### Java → Kotlin 변환 시 주요 차이
 
@@ -52,7 +58,7 @@ Kotlin 버전은 Java를 줄 단위로 옮기지 않고, Kotlin답게 옮긴 뒤
 | Lombok | 사용하지 않음 (Kotlin 문법으로 대체) |
 | `@Value("${...}")` | `@Value("\${...}")` — `$`는 Kotlin 문자열 템플릿이라 이스케이프 |
 | `produces = MediaType.X` | `produces = [MediaType.X]` — 애너테이션 배열 문법 |
-| — | `kotlin-maven-plugin` + `spring` 컴파일러 플러그인(Spring 빈 클래스를 자동으로 `open`), `jackson-module-kotlin` |
+| — | Maven: `kotlin-maven-plugin` + `spring` 컴파일러 플러그인 / Gradle: `kotlin("jvm")` + `kotlin("plugin.spring")` (Spring 빈 클래스를 자동으로 `open`), `jackson-module-kotlin` |
 
 #### ch3
 
@@ -108,6 +114,24 @@ ch5 Kotlin에서 추가로 다듬은 점 (외부 동작은 Java와 동일):
 - `TravelService`: `recommend`·`recommendCustom`이 같은 템플릿을 쓰므로 템플릿 문구는 상수 하나, 바인딩·호출은 private 함수 하나로 모음 (Java는 같은 텍스트 블록이 두 번). `PromptTemplate`은 가변 객체라 공유하지 않고 호출마다 만듦
 - `SentimentClassifyService`: 단독 호출(`zeroShot`·`fewShot`)과 비교(`compare`)가 같은 프롬프트를 쓰므로 Zero-shot 문구와 Few-shot 렌더링을 private 함수 하나씩으로 모음 (Java는 같은 문자열·렌더링이 두 곳에)
 
+#### ch6
+
+| Java | Kotlin |
+|---|---|
+| `build.gradle` (Groovy DSL, Boot 의존성 관리 없음) | `build.gradle.kts` (Kotlin DSL) + `platform(SpringBootPlugin.BOM_COORDINATES)` — Maven 챕터의 starter-parent처럼 Boot BOM으로 버전을 관리. 그래서 일부 전이 의존성 버전이 Java와 다름 (openai-java가 쓰는 Jackson 2: 2.18.9 → 2.21.7, kotlin-stdlib-jdk7·8: 1.9.10 → 2.3.21 등). 출력은 같음 |
+| `public static void main` + `SpringApplication.run(...)` | 최상위 `fun main` + `runApplication<Section06Application>(*args)` |
+| `(demos == null \|\| demos.isEmpty()) ? "similarity" : demos.get(0)` | `args.getOptionValues("demo")?.firstOrNull() ?: "similarity"` — `getOptionValues`가 `@Nullable`. 옵션이 없거나 값 없이 `--demo`만 주면 둘 다 기본값으로 Java와 같음 |
+| 텍스트 블록 + `System.out.println` | `"""...""".textBlock()` + `println` — ch5와 같은 확장 함수로 출력이 Java와 글자 단위로 같음 |
+| `(int) Math.round(Math.max(0, sim) * 40)` | `Math.round(max(0.0, sim) * 40).toInt()` — `roundToInt()`는 NaN(영벡터 비교)에서 예외를 던지므로 Java처럼 0이 되도록 `Math.round` 유지 |
+| `text.replaceAll("\\s+", " ").trim()` | 미리 컴파일한 `Regex` + `trim { it <= ' ' }` — Java `String.trim()`과 같은 기준 (Kotlin 기본 `trim()`은 유니코드 공백까지 지움) |
+| `new LinkedHashMap<>()` + `put` ×5 | `mapOf(...)` — 수정하지 않으므로 읽기 전용, 삽입 순서 유지 |
+
+ch6 Kotlin에서 추가로 다듬은 점 (출력은 Java와 동일):
+
+- `.gitignore`에 Kotlin Gradle 플러그인의 로컬 폴더 `.kotlin/` 추가
+- Gradle 9 요구사항에 맞게 `junit-platform-launcher`를 테스트 런타임에 선언
+- Java begin 코드의 아직 쓰지 않는 import는 옮기지 않음 (빈자리를 채우는 동기화 때 함께 들어옴)
+
 ## 실행 방법
 
 ### 1. OpenAI API 키 설정
@@ -146,7 +170,16 @@ cd Java/ch4_begin      # 챕터 폴더로 이동 (Kotlin 버전은 cd Kotlin/ch4
 ./mvnw spring-boot:run
 ```
 
-모든 프로젝트가 기본 포트 8080을 사용합니다. 동시에 띄우려면 한쪽을 `./mvnw spring-boot:run -Dspring-boot.run.arguments=--server.port=8081`로 실행하세요.
+웹 프로젝트(ch3~ch5)는 모두 기본 포트 8080을 사용합니다. 동시에 띄우려면 한쪽을 `./mvnw spring-boot:run -Dspring-boot.run.arguments=--server.port=8081`로 실행하세요.
+
+ch6은 Gradle 프로젝트이고, 웹 서버 없이 데모 결과를 콘솔에 출력하고 끝나는 CLI 앱입니다. `--demo`로 데모를 고릅니다 (생략하면 `similarity`).
+
+```bash
+cd Java/ch6_begin      # Kotlin 버전은 cd Kotlin/ch6_begin
+./gradlew bootRun --args='--demo=similarity'   # chunking | minirag
+```
+
+Gradle toolchain이 JDK 25를 찾아 컴파일·실행하므로 JDK 25가 설치돼 있어야 합니다 (`JAVA_HOME`이 다른 버전이어도 됩니다).
 
 ch4의 Jev 리뷰 분석(`POST /api/movies/review/jev`)은 기본으로 꺼져 있어 503을 돌려줍니다.
 켜려면 TypeSafe API 키를 환경변수 `TYPESAFE_API_KEY`로 넣고 `JEV_ENABLED=true`로 실행하세요.
@@ -221,6 +254,16 @@ SSE 응답에는 `charset`이 붙지 않아 IntelliJ HTTP Client가 한글을 IS
 
 ch5의 엔드포인트는 모두 동작합니다. 다만 강의를 따라 실습하는 중이라, `/injection/*`은 차단 안내 문구가 아직 비어 있어 차단되면 `finalAnswer`가 `null`입니다.
 `http/section5-prompt-engineering.http`에서 IntelliJ HTTP Client로 바로 호출해 볼 수 있습니다.
+
+#### ch6 — CLI 데모 (API 없음)
+
+| `--demo=` | 내용 |
+|---|---|
+| `similarity` (기본) | 임베딩 유사도 — "고양이"와 후보 문장들의 코사인 유사도를 비교해, 절대값보다 순위와 격차가 의미 있다는 점을 확인 |
+| `chunking` | 청크 크기 비교 — 같은 사내 규정 문서를 청크 크기 200 / 500 / 1000으로 나눠 정밀 매칭과 문맥 보존의 트레이드오프 확인 |
+| `minirag` | 미니 RAG — DB 없이 `SimpleVectorStore`(인메모리)로 적재 → 검색 → 근거 주입 → 생성 흐름을 보고, RAG 미적용 답변과 비교 |
+
+강의를 따라 실습하는 중이라 데모의 구현 부분이 아직 비어 있습니다. 지금은 안내 문구와 관찰 포인트만 출력하고 OpenAI를 호출하지 않습니다.
 
 ## 참고
 
