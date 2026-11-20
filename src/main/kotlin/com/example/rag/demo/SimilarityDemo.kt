@@ -30,6 +30,15 @@ class SimilarityDemo(
         )
 
         // embedding
+        val queryVector = embeddingModel.embed(query)
+        println("질의: \"%s\" (임베딩 차원 = %d)%n".format(query, queryVector.size))
+        println("%-22s %12s    %s".format("비교 대상", "코사인유사도", "막대"))
+        println("-".repeat(66))
+
+        candidates.forEach { (label, text) ->
+            val sim = cosineSimilarity(queryVector, embeddingModel.embed(text))
+            println("%-22s %12.4f    %s".format(label, sim, bar(sim)))
+        }
 
         println(
             """
