@@ -127,9 +127,11 @@ ch5 Kotlin에서 추가로 다듬은 점 (외부 동작은 Java와 동일):
 | `new LinkedHashMap<>()` + `put` ×5 | `mapOf(...)` — 수정하지 않으므로 읽기 전용, 삽입 순서 유지 |
 | `System.out.printf("%-22s %12.4f    %s%n", ...)` (`similarity`·`chunking`) | `println("%-22s %12.4f    %s".format(...))` — 같은 `java.util.Formatter`라 로캘(소수점·천 단위 구분 `%,d`·현지 숫자)과 줄 구분자까지 Java와 같음. 숫자는 로캘에 따라 달라지므로 문자열 템플릿(`"$x"`)으로 바꾸지 않음 |
 | `float[] queryVector = embeddingModel.embed(query)` | `val queryVector = embeddingModel.embed(query)` — Spring AI 2.x `EmbeddingModel`은 `@NullMarked` 패키지라 `FloatArray`(non-null) |
-| `d.getText().length()` (`chunking`) | 파일 private 확장 프로퍼티 `requiredText` — Spring AI 2.x `Document.getText()`가 `@Nullable`이라, 텍스트가 없으면 원인 메시지와 함께 실패 (Java는 같은 자리에서 NPE. `TextReader`·`TokenTextSplitter`가 만든 문서는 항상 텍스트가 있음) |
+| `d.getText().length()`, `preview(d.getText())` (`chunking`·`minirag`) | 확장 프로퍼티 `requiredText` (`DemoRunner.kt`의 `internal`, 두 데모가 함께 씀) — Spring AI 2.x `Document.getText()`가 `@Nullable`이라, 텍스트가 없으면 원인 메시지와 함께 실패 (Java는 텍스트를 처음 쓰는 자리에서 NPE. `TextReader`·`TokenTextSplitter`·`SimpleVectorStore`가 돌려준 문서는 항상 텍스트가 있음) |
 | `chunks.stream().mapToInt(...).average().orElse(0)` | `if (chunks.isEmpty()) 0.0 else chunks.map { ... }.average()` — Kotlin `average()`는 빈 목록에서 NaN이라 Java처럼 0이 되게 분기 |
 | `chunks.get(0)` | `chunks[0]` — 청크가 0개면 Java와 같은 `IndexOutOfBoundsException` (`first()`는 `NoSuchElementException`이라 쓰지 않음) |
+| `String withRag = chatClient.prompt()...content()` (`minirag`) | `val withRag: String? = ...` — `content()`가 `@Nullable`. Java와 같이 응답이 없으면 `null`로 출력 |
+| `for (int i = 0; ...) found.get(i)` / `stream().map(Document::getText).collect(joining(...))` | `found.forEachIndexed { i, d -> }` / `found.joinToString("\n----\n") { it.requiredText }` |
 
 ch6 Kotlin에서 추가로 다듬은 점 (출력은 Java와 동일):
 
@@ -270,7 +272,7 @@ ch5의 엔드포인트는 모두 동작합니다. 다만 강의를 따라 실습
 
 `similarity`는 OpenAI 임베딩(`text-embedding-3-small`)을 호출해 유사도 표를 출력합니다.
 `chunking`은 OpenAI 없이 로컬에서 토큰 단위로 나눠 청크 수·평균 길이·미리보기를 출력합니다.
-`minirag`는 강의를 따라 실습하는 중이라 구현 부분이 아직 비어 있어, 안내 문구와 관찰 포인트만 출력하고 OpenAI를 호출하지 않습니다.
+`minirag`는 사내 규정 문서를 400 토큰 청크로 나눠 `SimpleVectorStore`에 임베딩해 두고, 질문과 가까운 근거 3건을 찾아 주입한 답변과 RAG 미적용 답변(`gpt-4o-mini`)을 나란히 출력합니다.
 
 ## 참고
 
