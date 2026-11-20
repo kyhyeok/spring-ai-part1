@@ -10,7 +10,9 @@ spring:
         model: gpt-4o-mini
         temperature: 0.2
       embedding:
-        model: text-embedding-3-small
+#        model: text-embedding-3-small
+        model: text-embedding-ada-002
+
 
 logging:
   level:
