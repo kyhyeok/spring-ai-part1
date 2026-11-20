@@ -125,8 +125,11 @@ ch5 Kotlin에서 추가로 다듬은 점 (외부 동작은 Java와 동일):
 | `(int) Math.round(Math.max(0, sim) * 40)` | `Math.round(max(0.0, sim) * 40).toInt()` — `roundToInt()`는 NaN(영벡터 비교)에서 예외를 던지므로 Java처럼 0이 되도록 `Math.round` 유지 |
 | `text.replaceAll("\\s+", " ").trim()` | 미리 컴파일한 `Regex` + `trim { it <= ' ' }` — Java `String.trim()`과 같은 기준 (Kotlin 기본 `trim()`은 유니코드 공백까지 지움) |
 | `new LinkedHashMap<>()` + `put` ×5 | `mapOf(...)` — 수정하지 않으므로 읽기 전용, 삽입 순서 유지 |
-| `System.out.printf("%-22s %12.4f    %s%n", ...)` (`similarity`) | `println("%-22s %12.4f    %s".format(...))` — 같은 `java.util.Formatter`라 로캘(소수점·현지 숫자)과 줄 구분자까지 Java와 같음. 숫자는 로캘에 따라 달라지므로 문자열 템플릿(`"$x"`)으로 바꾸지 않음 |
+| `System.out.printf("%-22s %12.4f    %s%n", ...)` (`similarity`·`chunking`) | `println("%-22s %12.4f    %s".format(...))` — 같은 `java.util.Formatter`라 로캘(소수점·천 단위 구분 `%,d`·현지 숫자)과 줄 구분자까지 Java와 같음. 숫자는 로캘에 따라 달라지므로 문자열 템플릿(`"$x"`)으로 바꾸지 않음 |
 | `float[] queryVector = embeddingModel.embed(query)` | `val queryVector = embeddingModel.embed(query)` — Spring AI 2.x `EmbeddingModel`은 `@NullMarked` 패키지라 `FloatArray`(non-null) |
+| `d.getText().length()` (`chunking`) | 파일 private 확장 프로퍼티 `requiredText` — Spring AI 2.x `Document.getText()`가 `@Nullable`이라, 텍스트가 없으면 원인 메시지와 함께 실패 (Java는 같은 자리에서 NPE. `TextReader`·`TokenTextSplitter`가 만든 문서는 항상 텍스트가 있음) |
+| `chunks.stream().mapToInt(...).average().orElse(0)` | `if (chunks.isEmpty()) 0.0 else chunks.map { ... }.average()` — Kotlin `average()`는 빈 목록에서 NaN이라 Java처럼 0이 되게 분기 |
+| `chunks.get(0)` | `chunks[0]` — 청크가 0개면 Java와 같은 `IndexOutOfBoundsException` (`first()`는 `NoSuchElementException`이라 쓰지 않음) |
 
 ch6 Kotlin에서 추가로 다듬은 점 (출력은 Java와 동일):
 
@@ -265,8 +268,9 @@ ch5의 엔드포인트는 모두 동작합니다. 다만 강의를 따라 실습
 | `chunking` | 청크 크기 비교 — 같은 사내 규정 문서를 청크 크기 200 / 500 / 1000으로 나눠 정밀 매칭과 문맥 보존의 트레이드오프 확인 |
 | `minirag` | 미니 RAG — DB 없이 `SimpleVectorStore`(인메모리)로 적재 → 검색 → 근거 주입 → 생성 흐름을 보고, RAG 미적용 답변과 비교 |
 
-`similarity`는 구현을 마쳐 OpenAI 임베딩(`text-embedding-ada-002`)을 호출하고 유사도 표를 출력합니다.
-`chunking`과 `minirag`는 강의를 따라 실습하는 중이라 구현 부분이 아직 비어 있어, 안내 문구와 관찰 포인트만 출력하고 OpenAI를 호출하지 않습니다.
+`similarity`는 OpenAI 임베딩(`text-embedding-3-small`)을 호출해 유사도 표를 출력합니다.
+`chunking`은 OpenAI 없이 로컬에서 토큰 단위로 나눠 청크 수·평균 길이·미리보기를 출력합니다.
+`minirag`는 강의를 따라 실습하는 중이라 구현 부분이 아직 비어 있어, 안내 문구와 관찰 포인트만 출력하고 OpenAI를 호출하지 않습니다.
 
 ## 참고
 
