@@ -18,27 +18,54 @@ import java.util.List;
 @Component
 public class ChunkingDemo {
 
-    private final Resource policyDoc;
+	private final Resource policyDoc;
 
-    public ChunkingDemo(@Value("classpath:docs/company-policy.txt") Resource policyDoc) {
-        this.policyDoc = policyDoc;
-    }
+	public ChunkingDemo(@Value("classpath:docs/company-policy.txt") Resource policyDoc) {
+		this.policyDoc = policyDoc;
+	}
 
-    public void run() {
-        System.out.println("=== 데모 (2) 청킹 비교 ===\n");
+	public void run() {
+		System.out.println("=== 데모 (2) 청킹 비교 ===\n");
 
-       // chunking
+		// chunking
+		List<Document> source = new TextReader(policyDoc).get(); // source = 1
+		int totalChars = source.stream().mapToInt(d -> d.getText().length()).sum();
+		System.out.printf("원본 문서: %d건, 총 %,d자%n%n", source.size(), totalChars);
 
-        System.out.println("""
-                [관찰 포인트]
-                  - 작은 청크 : 조각이 정밀하지만 조항 중간에서 끊길 수 있다 (문맥 단절)
-                  - 큰 청크   : 문맥은 온전하지만 무관한 내용이 함께 딸려온다 (노이즈)
-                  - 정답 크기는 없다. 문서 성격에 따라 다르며 Section 8에서 '평가'로 찾는다.
-                """);
-    }
+		for (int chunkSize : new int[] {200, 500, 1000}) {
+			TokenTextSplitter splitter = TokenTextSplitter.builder()
+				.withChunkSize(chunkSize)        // 기본 텍스트 분할 토큰 크기
+				.withMinChunkSizeChars(100)        // 최소 문자 단위 크기
+				.withMinChunkLengthToEmbed(5)    // 임베딩할 최소 길이
+				.withMaxNumChunks(10_000)        // 최대 생성 가능 청크 수
+				.withKeepSeparator(true)        // 구분자 유지 여부
+				.build();
 
-    private static String preview(String text) {
-        String flat = text.replaceAll("\\s+", " ").trim();
-        return flat.length() <= 90 ? flat : flat.substring(0, 90) + " ...";
-    }
+			List<Document> chunks = splitter.apply(source);
+
+			double avgLen = chunks.stream().mapToInt(d -> d.getText().length()).average().orElse(0);
+			System.out.printf("[청크 크기 %4d 토큰] -> %2d개 청크, 평균 %.0f자%n"
+			, chunkSize, chunks.size(), avgLen);
+			System.out.println(" 첫 청크 미리보기");
+			System.out.println("    " + preview(chunks.get(0).getText()));
+
+			if (chunks.size() > 1) {
+				System.out.println(" 두번째 청크 미리보기");
+				System.out.println("    " + preview(chunks.get(1).getText()));
+			}
+			System.out.println();
+		}
+
+		System.out.println("""
+			[관찰 포인트]
+			  - 작은 청크 : 조각이 정밀하지만 조항 중간에서 끊길 수 있다 (문맥 단절)
+			  - 큰 청크   : 문맥은 온전하지만 무관한 내용이 함께 딸려온다 (노이즈)
+			  - 정답 크기는 없다. 문서 성격에 따라 다르며 Section 8에서 '평가'로 찾는다.
+			""");
+	}
+
+	private static String preview(String text) {
+		String flat = text.replaceAll("\\s+", " ").trim();
+		return flat.length() <= 90 ? flat : flat.substring(0, 90) + " ...";
+	}
 }
