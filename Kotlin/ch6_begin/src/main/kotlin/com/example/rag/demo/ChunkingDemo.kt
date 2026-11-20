@@ -1,6 +1,5 @@
 package com.example.rag.demo
 
-import org.springframework.ai.document.Document
 import org.springframework.ai.reader.TextReader
 import org.springframework.ai.transformer.splitter.TokenTextSplitter
 import org.springframework.beans.factory.annotation.Value
@@ -68,11 +67,3 @@ class ChunkingDemo(
 }
 
 private val WHITESPACE = Regex("\\s+")
-
-/**
- * Spring AI 2.x `Document.getText()`는 `@Nullable`(미디어 문서는 텍스트가 없음)이다.
- * TextReader·TokenTextSplitter가 만든 문서는 항상 텍스트가 있으므로, 없으면 원인 메시지와 함께 실패한다
- * (Java는 같은 자리에서 NPE).
- */
-private val Document.requiredText: String
-    get() = checkNotNull(text) { "텍스트가 없는 Document: $id" }

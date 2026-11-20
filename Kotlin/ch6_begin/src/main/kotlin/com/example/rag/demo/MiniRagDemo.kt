@@ -2,6 +2,10 @@ package com.example.rag.demo
 
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.embedding.EmbeddingModel
+import org.springframework.ai.reader.TextReader
+import org.springframework.ai.transformer.splitter.TokenTextSplitter
+import org.springframework.ai.vectorstore.SearchRequest
+import org.springframework.ai.vectorstore.SimpleVectorStore
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.io.Resource
 import org.springframework.stereotype.Component
@@ -30,6 +34,22 @@ class MiniRagDemo(
         // ---------- 1. 적재 ----------
         println("[1/3] 적재 중...")
         /* 구현 */
+        val reader = TextReader(policyDoc)
+        reader.customMetadata["source"] = "company-policy.txt"
+        val docs = reader.get()
+
+        val splitter = TokenTextSplitter.builder()
+            .withChunkSize(400)             // 기본 텍스트 분할 토큰 크기
+            .withMinChunkSizeChars(100)     // 최소 문자 단위 크기
+            .withMinChunkLengthToEmbed(5)   // 임베딩할 최소 길이
+            .withMaxNumChunks(10_000)       // 최대 생성 가능 청크 수
+            .withKeepSeparator(true)        // 구분자 유지 여부
+            .build()
+
+        val chunks = splitter.apply(docs)
+        val vectorStore = SimpleVectorStore.builder(embeddingModel).build()
+        vectorStore.add(chunks)
+        println("      원본 %d건 -> 청크 %d건 적재 완료%n".format(docs.size, chunks.size))
 
         val question = "연차 휴가는 며칠이고 언제까지 사용해야 하나요?"
 
@@ -37,15 +57,47 @@ class MiniRagDemo(
         println("[2/3] 유사도 검색 (LLM 호출 전 - 근거 확인)")
         println("      질문: $question")
         /* 구현 */
+        val found = vectorStore.similaritySearch(
+            SearchRequest.builder().query(question).topK(3).build()
+        )
+
+        found.forEachIndexed { i, d ->
+            println(
+                "      근거 %d) [%s] %s".format(
+                    i + 1,
+                    d.metadata.getOrDefault("source", "-"),
+                    preview(d.requiredText),
+                )
+            )
+        }
         println()
 
         // ---------- 3. 생성 ----------
         println("[3/3] 근거를 주입해 답변 생성")
         /* 구현 */
+        val context = found.joinToString("\n----\n") { it.requiredText }
 
-        val withRag = ""
+        // content()는 @Nullable이라 String? (Java와 같이 null이면 "null"로 출력)
+        val withRag: String? = chatClient.prompt()
+            .system(
+                """
+                너는 사내 규정 안내 도우미입니다.
+                아래 [근거]에 있는 내용만 사용해서 한국어로 간결하게 답하세요.
+                근거에 없으면 "제공된 문서에서 확인할 수 없습니다"라고 답하세요.
+                """.textBlock()
+            )
+            .user { u ->
+                u.text("[근거]\n{ctx}\n\n[질문]\n{q}")
+                    .param("ctx", context)
+                    .param("q", question)
+            }
+            .call()
+            .content()
 
-        val withoutRag = ""
+        val withoutRag: String? = chatClient.prompt()
+            .user(question)
+            .call()
+            .content()
 
         println("\n--- RAG 적용 답변 ---")
         println(withRag)

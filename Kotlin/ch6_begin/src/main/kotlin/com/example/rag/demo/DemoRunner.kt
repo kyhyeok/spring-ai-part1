@@ -1,5 +1,6 @@
 package com.example.rag.demo
 
+import org.springframework.ai.document.Document
 import org.springframework.boot.ApplicationArguments
 import org.springframework.boot.ApplicationRunner
 import org.springframework.stereotype.Component
@@ -41,3 +42,11 @@ class DemoRunner(
 internal fun String.textBlock(): String =
     // 줄 끝 공백 판정은 Java와 같은 Character.isWhitespace (Kotlin isWhitespace는 NBSP까지 지운다)
     trimIndent().lines().joinToString("\n") { line -> line.trimEnd { Character.isWhitespace(it) } } + "\n"
+
+/**
+ * Spring AI 2.x `Document.getText()`는 `@Nullable`(미디어 문서는 텍스트가 없음)이다.
+ * TextReader·TokenTextSplitter·SimpleVectorStore가 돌려준 문서는 항상 텍스트가 있으므로,
+ * 없으면 원인 메시지와 함께 실패한다 (Java는 텍스트를 처음 쓰는 자리에서 NPE).
+ */
+internal val Document.requiredText: String
+    get() = checkNotNull(text) { "텍스트가 없는 Document: $id" }
