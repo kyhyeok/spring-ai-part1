@@ -13,6 +13,7 @@ Spring AI 강의 실습 코드를 챕터별 프로젝트로 정리한 저장소�
 | Spring AI | 2.0.2 (OpenAI) |
 | Maven | 3.9.16 (Maven Wrapper 포함, ch3~ch5) |
 | Gradle | 9.7.0 (Gradle Wrapper 포함, ch6~) |
+| Vector DB | PostgreSQL 16 + pgvector (Docker Compose, ch7~) |
 
 ## 프로젝트 구성
 
@@ -22,12 +23,14 @@ spring-ai-part1/
 │   ├── ch3_begin/     # Java 원본
 │   ├── ch4_begin/
 │   ├── ch5_begin/
-│   └── ch6_begin/
+│   ├── ch6_begin/
+│   └── ch7_begin/
 └── Kotlin/
     ├── ch3_begin/     # Java 원본을 Kotlin으로 변환
     ├── ch4_begin/
     ├── ch5_begin/
-    └── ch6_begin/
+    ├── ch6_begin/
+    └── ch7_begin/
 ```
 
 | 폴더 | 언어 | 챕터 | 내용 |
@@ -40,6 +43,8 @@ spring-ai-part1/
 | [Kotlin/ch5_begin](Kotlin/ch5_begin) | Kotlin | ch5 | 위 Java 프로젝트의 Kotlin 변환본 (동일한 API, Kotlin답게 다듬음) |
 | [Java/ch6_begin](Java/ch6_begin) | Java | ch6 | RAG 개념과 Vector Store 기초 — 개념 확인용 CLI 데모 3종: 임베딩 유사도(코사인), 청크 크기 비교, 미니 RAG(`SimpleVectorStore`) (실습 진행 중) |
 | [Kotlin/ch6_begin](Kotlin/ch6_begin) | Kotlin | ch6 | 위 Java 프로젝트의 Kotlin 변환본 (같은 데모·출력, Kotlin답게 다듬음) |
+| [Java/ch7_begin](Java/ch7_begin) | Java | ch7 | Spring AI로 RAG 파이프라인 구축 — pgvector 기반 end-to-end RAG: 문서 적재(텍스트·PDF → 청킹 → 임베딩 저장), LLM 없는 유사도 검색, `QuestionAnswerAdvisor` 질의응답, RAG 미적용 답변 비교 (실습 시작 전 begin 코드라 아직 컴파일되지 않음) |
+| [Kotlin/ch7_begin](Kotlin/ch7_begin) | Kotlin | ch7 | 위 Java 프로젝트의 Kotlin 변환본 (같은 API, Kotlin답게 다듬음. 실습 빈자리는 `TODO()`라 빌드는 되지만 기동 시 멈춤) |
 
 각 폴더는 독립된 프로젝트입니다. ch3~ch5는 Maven, ch6부터는 Gradle을 씁니다.
 IntelliJ에서는 폴더 안의 `pom.xml`(Maven) 또는 `build.gradle`·`build.gradle.kts`(Gradle)를 프로젝트로 열면 됩니다.
@@ -139,6 +144,17 @@ ch6 Kotlin에서 추가로 다듬은 점 (출력은 Java와 동일):
 - Gradle 9 요구사항에 맞게 `junit-platform-launcher`를 테스트 런타임에 선언
 - Java begin 코드의 아직 쓰지 않는 import는 옮기지 않음 (빈자리를 채우는 동기화 때 함께 들어옴)
 
+#### ch7
+
+| Java | Kotlin |
+|---|---|
+| begin 빈자리 때문에 컴파일되지 않음: 선언되지 않은 `docs`·`chunks`(`ingestSample`), 인자 없는 `map()`(`/search`), 생성자에서 대입하지 않은 `final` 필드 `ragChatClient`·`plainChatClient` | 컴파일을 막는 이 다섯 자리만 `TODO("실습: ...")`로 채움 — 빌드는 되지만 기동 시 `RagController`를 만들다 `NotImplementedError: ... 실습: ragChatClient 생성`으로 멈춤. 빈자리를 채우는 동기화 때 `TODO(...)`가 실제 코드로 바뀜 |
+| 컴파일되는 빈자리: `return null`(`/ingest`·`/ingestPdf`·`/ask`·`/ask-norag`), `requestBuilder = null`, `results = null`, 빈 `if`, 주석 처리된 로그·반환 | 그대로 둠 — 반환형은 nullable(`IngestResult?`, `Map<String, Any?>?`)이라 Java처럼 200 빈 본문, `results!!.map { ... }`은 Java `results.stream()`과 같은 자리에서 NPE |
+| `spring-boot-starter-web` | `spring-boot-starter-webmvc` — Boot 4에서 `starter-web`은 deprecated된 이전 이름이고 구성 의존성은 같음 (ch3~ch5와 같은 스타터) |
+| `io.spring.dependency-management` 플러그인 | `platform(SpringBootPlugin.BOM_COORDINATES)` — 같은 Boot BOM으로 관리해 해석된 라이브러리 버전이 Java와 같음 (ch6과 달리 차이 없음) |
+| `source != null && !source.isBlank()` (`/search`) | `source != null && !source.all(Character::isWhitespace)` — Kotlin `isBlank()`는 NBSP(U+00A0) 등도 공백으로 봐서, 빈자리를 채우면 `?source=%C2%A0`일 때 필터 적용 여부가 Java와 달라질 수 있음 |
+| `record IngestResult(int documents, int chunks, int chunkSize)` (중첩) | 중첩 `data class IngestResult(val documents: Int, val chunks: Int, val chunkSize: Int)` — JSON 형태 같음 |
+
 ## 실행 방법
 
 ### 1. OpenAI API 키 설정
@@ -177,7 +193,7 @@ cd Java/ch4_begin      # 챕터 폴더로 이동 (Kotlin 버전은 cd Kotlin/ch4
 ./mvnw spring-boot:run
 ```
 
-웹 프로젝트(ch3~ch5)는 모두 기본 포트 8080을 사용합니다. 동시에 띄우려면 한쪽을 `./mvnw spring-boot:run -Dspring-boot.run.arguments=--server.port=8081`로 실행하세요.
+웹 프로젝트(ch3~ch5, ch7)는 모두 기본 포트 8080을 사용합니다. 동시에 띄우려면 한쪽을 `./mvnw spring-boot:run -Dspring-boot.run.arguments=--server.port=8081`로 실행하세요.
 
 ch6은 Gradle 프로젝트이고, 웹 서버 없이 데모 결과를 콘솔에 출력하고 끝나는 CLI 앱입니다. `--demo`로 데모를 고릅니다 (생략하면 `similarity`).
 
@@ -185,6 +201,18 @@ ch6은 Gradle 프로젝트이고, 웹 서버 없이 데모 결과를 콘솔에 �
 cd Java/ch6_begin      # Kotlin 버전은 cd Kotlin/ch6_begin
 ./gradlew bootRun --args='--demo=similarity'   # chunking | minirag
 ```
+
+ch7은 Gradle 웹 프로젝트(기본 포트 8080)이고, 벡터 저장소로 PostgreSQL + pgvector를 씁니다. Docker로 DB를 먼저 띄운 뒤 실행합니다.
+
+```bash
+cd Java/ch7_begin      # Kotlin 버전은 cd Kotlin/ch7_begin
+docker compose up -d   # pgvector 기동 (localhost:5432, DB ragdb / 계정 rag)
+./gradlew bootRun
+```
+
+Java와 Kotlin의 `docker-compose.yml`은 같은 컨테이너(`rag-pgvector`)를 쓰므로 한 번만 띄우면 됩니다.
+두 앱을 동시에 띄우려면 한쪽을 `./gradlew bootRun --args='--server.port=8081'`로 실행하세요.
+로컬 5432 포트가 이미 쓰이고 있으면 `docker-compose.yml`의 호스트 쪽 포트와 `application.yml`의 datasource URL을 함께 바꾸세요.
 
 Gradle toolchain이 JDK 25를 찾아 컴파일·실행하므로 JDK 25가 설치돼 있어야 합니다 (`JAVA_HOME`이 다른 버전이어도 됩니다).
 
@@ -273,6 +301,20 @@ ch5의 엔드포인트는 모두 동작합니다. 다만 강의를 따라 실습
 `similarity`는 OpenAI 임베딩(`text-embedding-3-small`)을 호출해 유사도 표를 출력합니다.
 `chunking`은 OpenAI 없이 로컬에서 토큰 단위로 나눠 청크 수·평균 길이·미리보기를 출력합니다.
 `minirag`는 사내 규정 문서를 400 토큰 청크로 나눠 `SimpleVectorStore`에 임베딩해 두고, 질문과 가까운 근거 3건을 찾아 주입한 답변과 RAG 미적용 답변(`gpt-4o-mini`)을 나란히 출력합니다.
+
+#### ch7
+
+모든 엔드포인트는 `/api/rag` 아래에 있습니다.
+
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| POST | `/api/rag/ingest` | 샘플 문서(`docs/company-policy.txt`) 적재 — 로딩 → 메타데이터 → 청킹(`rag.chunk-size`=500 토큰) → 임베딩 저장. `{"documents", "chunks", "chunkSize"}` 반환 |
+| POST | `/api/rag/ingestPdf` | PDF(`docs/sample-contract.pdf`) 적재 — 페이지 단위 Document + page 메타데이터 |
+| GET | `/api/rag/search?q=...&topK=...&source=...` | LLM 호출 없이 유사도 검색만 (적재 품질 검증용). `topK`·`source`(메타데이터 필터)는 선택 |
+| GET | `/api/rag/ask?q=...` | RAG 질의응답 (`QuestionAnswerAdvisor`) |
+| GET | `/api/rag/ask-norag?q=...` | RAG 미적용 답변 (비교용) |
+
+ch7은 강의를 따라 실습하기 전(begin) 상태라 엔드포인트가 아직 구현되지 않았습니다 (Java는 컴파일되지 않고, Kotlin은 기동 시 `TODO()`에서 멈춤).
 
 ## 참고
 
