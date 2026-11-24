@@ -24,13 +24,15 @@ spring-ai-part1/
 │   ├── ch4_begin/
 │   ├── ch5_begin/
 │   ├── ch6_begin/
-│   └── ch7_begin/
+│   ├── ch7_begin/
+│   └── ch8_begin/
 └── Kotlin/
     ├── ch3_begin/     # Java 원본을 Kotlin으로 변환
     ├── ch4_begin/
     ├── ch5_begin/
     ├── ch6_begin/
-    └── ch7_begin/
+    ├── ch7_begin/
+    └── ch8_begin/
 ```
 
 | 폴더 | 언어 | 챕터 | 내용 |
@@ -45,6 +47,8 @@ spring-ai-part1/
 | [Kotlin/ch6_begin](Kotlin/ch6_begin) | Kotlin | ch6 | 위 Java 프로젝트의 Kotlin 변환본 (같은 데모·출력, Kotlin답게 다듬음) |
 | [Java/ch7_begin](Java/ch7_begin) | Java | ch7 | Spring AI로 RAG 파이프라인 구축 — pgvector 기반 end-to-end RAG: 문서 적재(텍스트·PDF → 청킹 → 임베딩 저장), LLM 없는 유사도 검색, `QuestionAnswerAdvisor` 질의응답, RAG 미적용 답변 비교 (실습 진행 중) |
 | [Kotlin/ch7_begin](Kotlin/ch7_begin) | Kotlin | ch7 | 위 Java 프로젝트의 Kotlin 변환본 (같은 API, Kotlin답게 다듬음) |
+| [Java/ch8_begin](Java/ch8_begin) | Java | ch8 | RAG 품질 개선: 튜닝과 평가 — 청크 크기별(200·500·1000) 적재와 검색 비교, 검색 파라미터(topK·임계값·메타데이터 필터) 실험, 근거를 함께 돌려주는 RAG 질의응답, 평가 세트(일반·경계·함정 15문항)와 `RelevancyEvaluator`(LLM-as-a-Judge)로 품질 측정, 품질 회귀 테스트 (실습 진행 중) |
+| [Kotlin/ch8_begin](Kotlin/ch8_begin) | Kotlin | ch8 | 위 Java 프로젝트의 Kotlin 변환본 (같은 API, Kotlin답게 다듬음) |
 
 각 폴더는 독립된 프로젝트입니다. ch3~ch5는 Maven, ch6부터는 Gradle을 씁니다.
 IntelliJ에서는 폴더 안의 `pom.xml`(Maven) 또는 `build.gradle`·`build.gradle.kts`(Gradle)를 프로젝트로 열면 됩니다.
@@ -159,6 +163,26 @@ ch6 Kotlin에서 추가로 다듬은 점 (출력은 Java와 동일):
 | `d.getText() == null \|\| d.getText().isBlank()` (`ingestPdf` 빈 페이지 수) | `d.text.let { it == null \|\| it.all(Character::isWhitespace) }` — Kotlin `isNullOrBlank()`는 NBSP 등도 공백으로 봐서 Java `isBlank()` 기준으로 맞춤 |
 | `record IngestResult(int documents, int chunks, int chunkSize)` (중첩) | 중첩 `data class IngestResult(val documents: Int, val chunks: Int, val chunkSize: Int)` — JSON 형태 같음 |
 
+#### ch8
+
+| Java | Kotlin |
+|---|---|
+| `@Bean ObjectMapper objectMapper()` → `new ObjectMapper()` (Jackson 2) | `jacksonObjectMapper()` — `EvaluationSet`을 data class로 두면 생성자로 역직렬화해야 해서 Kotlin 모듈을 붙임. 이 빈은 평가 세트를 읽을 때만 쓰이고 MVC 응답은 Jackson 3라 응답에는 영향 없음. `jackson-module-kotlin` 2.21.7은 Java에도 openai-java 경유로 이미 들어 있음 |
+| `record EvaluationSet(...)` / `record EvalQuestion(...)` | data class — 코드에서 읽지 않는 `description`·`document`와 trap 문항의 `expectedSource`만 nullable. `id`·`type`·`question`은 non-null이라 평가 세트 JSON에서 빠지면 Kotlin은 기동 실패 (Java는 null을 담고 기동) |
+| 빈자리 `Map.of("question", null, ...)` (`/api/rag/ask`) | `java.util.Map.of(...)`를 그대로 씀 — Kotlin `mapOf`는 null 값을 받아 200이 되므로, Java처럼 NPE(500)가 나도록 이 빈자리에서만 Java API를 씀 |
+| `docs.stream().map(Document::getText).collect(Collectors.joining("\n---\n"))` (`RagService`) | `docs.map { it.text }.joinToString("\n---\n")` — `getText()`가 `@Nullable`인데, Java `joining`처럼 텍스트가 없으면 `"null"`로 이어 붙임 (Java가 NPE를 내지 않는 자리라 ch6·ch7처럼 `checkNotNull`로 실패시키지 않음) |
+| `r.answer().contains(NOT_FOUND_MARKER)` — 답변이 null이면 NPE (`run()`) | `checkNotNull(r.answer)` 뒤 `NOT_FOUND_MARKER in answer` — 같은 자리에서 원인 메시지와 함께 실패. `RagResult.answer`는 `content()`가 `@Nullable`이라 `String?` |
+| `Arrays.stream(csv.split(",")).map(String::trim).map(Integer::parseInt)` (`rag.chunk-sizes`) | `Pattern.split` + `trim { it <= ' ' }.toInt()` — Kotlin `split`은 끝의 빈 항목을 남기고 `trim()`은 NBSP까지 지우므로 Java 규칙으로 맞춤 (끝 쉼표는 무시, 빈 값·빈 항목·NBSP는 둘 다 기동 실패) |
+| 시스템 프롬프트 텍스트 블록 — 닫는 `"""`가 마지막 줄 끝에 붙음 (`RagService`) | `"""...""".trimIndent()` — 끝 줄바꿈이 없으므로 ch7과 달리 `+ "\n"`을 붙이지 않음. 글자 단위로 Java와 같음 |
+| `Map.of(...)` 응답, `preview(d.getText())` (`/api/tuning/search`) | `mapOf(...)` — JSON 키 순서가 선언 순서로 고정 (Java는 실행마다 다름, 내용은 같음). `preview(checkNotNull(d.text) { ... })`는 ch7과 같은 관례 (Java는 같은 자리에서 NPE) |
+
+ch8 Kotlin에서 추가로 다듬은 점 (외부 동작은 Java와 동일):
+
+- `run()`의 세 갈래 분기를 `if / else if / else` 대신 `when`으로 (빈자리 모양은 같음)
+- 평가 세트 JSON 스트림을 `use { }`로 닫음
+- 평가 테스트(`RagQualityTest`)는 필드 주입 대신 `@Autowired constructor` 생성자 주입. 테스트 메서드 이름과 `@DisplayName`은 Java와 같음
+- `build.gradle.kts`에 Java와 같은 평가 테스트 제외(`-Peval`일 때만 실행)와 `testLogging` 설정
+
 ## 실행 방법
 
 ### 1. OpenAI API 키 설정
@@ -197,7 +221,7 @@ cd Java/ch4_begin      # 챕터 폴더로 이동 (Kotlin 버전은 cd Kotlin/ch4
 ./mvnw spring-boot:run
 ```
 
-웹 프로젝트(ch3~ch5, ch7)는 모두 기본 포트 8080을 사용합니다. 동시에 띄우려면 한쪽을 `./mvnw spring-boot:run -Dspring-boot.run.arguments=--server.port=8081`로 실행하세요.
+웹 프로젝트(ch3~ch5, ch7~ch8)는 모두 기본 포트 8080을 사용합니다. 동시에 띄우려면 한쪽을 `./mvnw spring-boot:run -Dspring-boot.run.arguments=--server.port=8081`로 실행하세요.
 
 ch6은 Gradle 프로젝트이고, 웹 서버 없이 데모 결과를 콘솔에 출력하고 끝나는 CLI 앱입니다. `--demo`로 데모를 고릅니다 (생략하면 `similarity`).
 
@@ -217,6 +241,19 @@ docker compose up -d   # pgvector 기동 (localhost:5432, DB ragdb / 계정 rag)
 Java와 Kotlin의 `docker-compose.yml`은 같은 컨테이너(`rag-pgvector`)를 쓰므로 한 번만 띄우면 됩니다.
 두 앱을 동시에 띄우려면 한쪽을 `./gradlew bootRun --args='--server.port=8081'`로 실행하세요.
 로컬 5432 포트가 이미 쓰이고 있으면 `docker-compose.yml`의 호스트 쪽 포트와 `application.yml`의 datasource URL을 함께 바꾸세요.
+
+ch8도 ch7과 같은 구성(Gradle 웹 프로젝트 + pgvector)입니다.
+
+```bash
+cd Java/ch8_begin      # Kotlin 버전은 cd Kotlin/ch8_begin
+docker compose up -d
+./gradlew bootRun
+./gradlew test -Peval  # 평가 테스트(RagQualityTest) — LLM 호출 비용이 들어 기본 ./gradlew test에서는 빠짐
+```
+
+ch8의 `docker-compose.yml`은 ch7과 컨테이너 이름(`rag-pgvector`)이 같지만 Compose 프로젝트(폴더 이름 `ch7_begin`/`ch8_begin`)가 다릅니다.
+그래서 ch7 컨테이너가 남아 있으면 이름이 겹쳐 `docker compose up`이 실패하니, ch7 폴더에서 `docker compose down`(데이터 볼륨은 남음)으로 먼저 지우세요.
+ch7 컨테이너를 그대로 켜서 써도 되지만, 그러면 ch7에서 적재한 청크가 같은 `vector_store` 테이블에 섞입니다.
 
 Gradle toolchain이 JDK 25를 찾아 컴파일·실행하므로 JDK 25가 설치돼 있어야 합니다 (`JAVA_HOME`이 다른 버전이어도 됩니다).
 
@@ -320,6 +357,19 @@ ch5의 엔드포인트는 모두 동작합니다. 다만 강의를 따라 실습
 
 ch7의 엔드포인트는 모두 동작합니다. `http/rag.http`에서 IntelliJ HTTP Client로 바로 호출해 볼 수 있습니다.
 `/ingest`·`/ingestPdf`는 호출할 때마다 같은 청크를 새 id로 다시 저장합니다(중복 적재). 처음부터 다시 하려면 `docker exec -it rag-pgvector psql -U rag -d ragdb -c "TRUNCATE vector_store;"`로 비우세요.
+
+#### ch8
+
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| POST | `/api/tuning/ingest-all` | 사내 규정 문서를 청크 크기별(`rag.chunk-sizes`=200·500·1000 토큰)로 나눠 적재. 청크마다 `chunkSize` 메타데이터를 붙여 같은 테이블 안에서 구분 |
+| GET | `/api/tuning/compare?q=...&topK=2` | 같은 질문으로 청크 크기별 검색 결과를 나란히 비교 |
+| GET | `/api/tuning/search?q=...&topK=4&threshold=0.0&chunkSize=...&category=...` | 검색 파라미터 실험 — topK·유사도 임계값·메타데이터 필터 (`chunkSize`·`category`는 선택) |
+| GET | `/api/rag/ask?q=...` | 현재 설정(`rag.active-chunk-size`·`top-k`·`similarity-threshold`)으로 질의응답. 근거 수와 근거 토큰 근사치를 함께 반환 |
+| POST | `/api/eval/run` | 평가 세트(`eval/evaluation-set.json`, 일반 9·경계 3·함정 3문항) 전체 실행 → 전체·유형별 통과율, 평균 근거 토큰, 실패 문항 리포트 |
+
+`topK`·`threshold`는 생략하면 위 예시 값이 기본값으로 쓰입니다.
+ch8은 아직 begin 코드 상태라(실습하며 채움) `/api/rag/ask`는 500, 나머지는 200 빈 응답입니다.
 
 ## 참고
 
