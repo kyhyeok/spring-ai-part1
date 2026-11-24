@@ -62,9 +62,7 @@ class IngestionService(
 
         val docs = reader.get()
 
-        // Java는 `d.getText() == null && d.getText().isBlank()`라 텍스트가 있으면 항상 0(경고가 뜨지 않음), null이면 NPE다
-        // (PagePdfDocumentReader는 null 텍스트를 만들지 않음). 의도대로 "null이거나 공백"을 센다.
-        // 응답은 같고 경고 로그만 다르다. 공백 판정은 Java String.isBlank()와 같은 Character.isWhitespace
+        // 공백 판정은 Java String.isBlank()와 같은 Character.isWhitespace (Kotlin isNullOrBlank()는 NBSP 등도 공백으로 본다)
         val emptyPages = docs.count { d -> d.text.let { it == null || it.all(Character::isWhitespace) } }
 
         if (emptyPages > 0) {
