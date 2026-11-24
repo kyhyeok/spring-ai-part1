@@ -43,8 +43,8 @@ spring-ai-part1/
 | [Kotlin/ch5_begin](Kotlin/ch5_begin) | Kotlin | ch5 | 위 Java 프로젝트의 Kotlin 변환본 (동일한 API, Kotlin답게 다듬음) |
 | [Java/ch6_begin](Java/ch6_begin) | Java | ch6 | RAG 개념과 Vector Store 기초 — 개념 확인용 CLI 데모 3종: 임베딩 유사도(코사인), 청크 크기 비교, 미니 RAG(`SimpleVectorStore`) (실습 진행 중) |
 | [Kotlin/ch6_begin](Kotlin/ch6_begin) | Kotlin | ch6 | 위 Java 프로젝트의 Kotlin 변환본 (같은 데모·출력, Kotlin답게 다듬음) |
-| [Java/ch7_begin](Java/ch7_begin) | Java | ch7 | Spring AI로 RAG 파이프라인 구축 — pgvector 기반 end-to-end RAG: 문서 적재(텍스트·PDF → 청킹 → 임베딩 저장), LLM 없는 유사도 검색, `QuestionAnswerAdvisor` 질의응답, RAG 미적용 답변 비교 (실습 시작 전 begin 코드라 아직 컴파일되지 않음) |
-| [Kotlin/ch7_begin](Kotlin/ch7_begin) | Kotlin | ch7 | 위 Java 프로젝트의 Kotlin 변환본 (같은 API, Kotlin답게 다듬음. 실습 빈자리는 `TODO()`라 빌드는 되지만 기동 시 멈춤) |
+| [Java/ch7_begin](Java/ch7_begin) | Java | ch7 | Spring AI로 RAG 파이프라인 구축 — pgvector 기반 end-to-end RAG: 문서 적재(텍스트·PDF → 청킹 → 임베딩 저장), LLM 없는 유사도 검색, `QuestionAnswerAdvisor` 질의응답, RAG 미적용 답변 비교 (실습 진행 중) |
+| [Kotlin/ch7_begin](Kotlin/ch7_begin) | Kotlin | ch7 | 위 Java 프로젝트의 Kotlin 변환본 (같은 API, Kotlin답게 다듬음) |
 
 각 폴더는 독립된 프로젝트입니다. ch3~ch5는 Maven, ch6부터는 Gradle을 씁니다.
 IntelliJ에서는 폴더 안의 `pom.xml`(Maven) 또는 `build.gradle`·`build.gradle.kts`(Gradle)를 프로젝트로 열면 됩니다.
@@ -148,11 +148,15 @@ ch6 Kotlin에서 추가로 다듬은 점 (출력은 Java와 동일):
 
 | Java | Kotlin |
 |---|---|
-| begin 빈자리 때문에 컴파일되지 않음: 선언되지 않은 `docs`·`chunks`(`ingestSample`), 인자 없는 `map()`(`/search`), 생성자에서 대입하지 않은 `final` 필드 `ragChatClient`·`plainChatClient` | 컴파일을 막는 이 다섯 자리만 `TODO("실습: ...")`로 채움 — 빌드는 되지만 기동 시 `RagController`를 만들다 `NotImplementedError: ... 실습: ragChatClient 생성`으로 멈춤. 빈자리를 채우는 동기화 때 `TODO(...)`가 실제 코드로 바뀜 |
-| 컴파일되는 빈자리: `return null`(`/ingest`·`/ingestPdf`·`/ask`·`/ask-norag`), `requestBuilder = null`, `results = null`, 빈 `if`, 주석 처리된 로그·반환 | 그대로 둠 — 반환형은 nullable(`IngestResult?`, `Map<String, Any?>?`)이라 Java처럼 200 빈 본문, `results!!.map { ... }`은 Java `results.stream()`과 같은 자리에서 NPE |
 | `spring-boot-starter-web` | `spring-boot-starter-webmvc` — Boot 4에서 `starter-web`은 deprecated된 이전 이름이고 구성 의존성은 같음 (ch3~ch5와 같은 스타터) |
 | `io.spring.dependency-management` 플러그인 | `platform(SpringBootPlugin.BOM_COORDINATES)` — 같은 Boot BOM으로 관리해 해석된 라이브러리 버전이 Java와 같음 (ch6과 달리 차이 없음) |
-| `source != null && !source.isBlank()` (`/search`) | `source != null && !source.all(Character::isWhitespace)` — Kotlin `isBlank()`는 NBSP(U+00A0) 등도 공백으로 봐서, 빈자리를 채우면 `?source=%C2%A0`일 때 필터 적용 여부가 Java와 달라질 수 있음 |
+| `source != null && !source.isBlank()` (`/search`) | `source != null && !source.all(Character::isWhitespace)` — Kotlin `isBlank()`는 NBSP(U+00A0) 등도 공백으로 봐서 `?source=%C2%A0`일 때 필터 적용 여부가 Java와 달라지므로 Java 기준으로 맞춤 |
+| 텍스트 블록 시스템 프롬프트 (`ragChatClient`) | `"""...""".trimIndent() + "\n"` 상수 — 끝 줄바꿈까지 Java와 글자 단위로 같음 |
+| `Map.of(...)` 응답 (`/search`·`/ask`·`/ask-norag`) | `mapOf(...)` — JSON 키가 선언 순서로 고정 (Java `Map.of`는 JVM 실행마다 순서가 다름, 내용은 같음) |
+| `Map.of(..., "answer", answer)` — 답변이 null이면 NPE(500) (`/ask`·`/ask-norag`) | `checkAnswer(answer)` — `content()`가 `@Nullable`이라 null이면 `checkNotNull`로 500 (ch5와 같은 관례) |
+| `d.getMetadata().getOrDefault("source", "-")`, `d.getScore() != null ? d.getScore() : 0.0`, `preview(d.getText())` (`/search`) | `d.metadata["source"] ?: "-"`, `d.score ?: 0.0`, `preview(checkNotNull(d.text) { ... })` — `Document`는 메타데이터 null 값을 거부하므로 `?:`가 `getOrDefault`와 같음. `getText()`가 `@Nullable`이라 텍스트가 없으면 원인 메시지와 함께 실패 (Java는 같은 자리에서 NPE) |
+| `reader.getCustomMetadata().putAll(Map.of(...))` (`/ingest`) | `putAll(mapOf(...))` — 메타데이터 내용은 같음. 다만 임베딩 입력에 붙는 메타데이터 줄 순서가 Java는 `Map.of` 순서를 따라 실행마다 바뀌고 Kotlin은 고정이라, 저장되는 벡터가 실행마다 미세하게 다를 수 있음 |
+| `d.getText() == null && d.getText().isBlank()` (`ingestPdf` 빈 페이지 수) | `d.text.let { it == null \|\| it.all(Character::isWhitespace) }` — Java 조건은 텍스트가 있으면 항상 거짓이라 경고가 뜨지 않음(강사 완성본은 `\|\|`). Kotlin은 의도대로 셈. 응답은 같고 경고 로그만 다름 |
 | `record IngestResult(int documents, int chunks, int chunkSize)` (중첩) | 중첩 `data class IngestResult(val documents: Int, val chunks: Int, val chunkSize: Int)` — JSON 형태 같음 |
 
 ## 실행 방법
@@ -314,7 +318,8 @@ ch5의 엔드포인트는 모두 동작합니다. 다만 강의를 따라 실습
 | GET | `/api/rag/ask?q=...` | RAG 질의응답 (`QuestionAnswerAdvisor`) |
 | GET | `/api/rag/ask-norag?q=...` | RAG 미적용 답변 (비교용) |
 
-ch7은 강의를 따라 실습하기 전(begin) 상태라 엔드포인트가 아직 구현되지 않았습니다 (Java는 컴파일되지 않고, Kotlin은 기동 시 `TODO()`에서 멈춤).
+ch7의 엔드포인트는 모두 동작합니다. `http/rag.http`에서 IntelliJ HTTP Client로 바로 호출해 볼 수 있습니다.
+`/ingest`·`/ingestPdf`는 호출할 때마다 같은 청크를 새 id로 다시 저장합니다(중복 적재). 처음부터 다시 하려면 `docker exec -it rag-pgvector psql -U rag -d ragdb -c "TRUNCATE vector_store;"`로 비우세요.
 
 ## 참고
 
