@@ -156,7 +156,7 @@ ch6 Kotlin에서 추가로 다듬은 점 (출력은 Java와 동일):
 | `Map.of(..., "answer", answer)` — 답변이 null이면 NPE(500) (`/ask`·`/ask-norag`) | `checkAnswer(answer)` — `content()`가 `@Nullable`이라 null이면 `checkNotNull`로 500 (ch5와 같은 관례) |
 | `d.getMetadata().getOrDefault("source", "-")`, `d.getScore() != null ? d.getScore() : 0.0`, `preview(d.getText())` (`/search`) | `d.metadata["source"] ?: "-"`, `d.score ?: 0.0`, `preview(checkNotNull(d.text) { ... })` — `Document`는 메타데이터 null 값을 거부하므로 `?:`가 `getOrDefault`와 같음. `getText()`가 `@Nullable`이라 텍스트가 없으면 원인 메시지와 함께 실패 (Java는 같은 자리에서 NPE) |
 | `reader.getCustomMetadata().putAll(Map.of(...))` (`/ingest`) | `putAll(mapOf(...))` — 메타데이터 내용은 같음. 다만 임베딩 입력에 붙는 메타데이터 줄 순서가 Java는 `Map.of` 순서를 따라 실행마다 바뀌고 Kotlin은 고정이라, 저장되는 벡터가 실행마다 미세하게 다를 수 있음 |
-| `d.getText() == null && d.getText().isBlank()` (`ingestPdf` 빈 페이지 수) | `d.text.let { it == null \|\| it.all(Character::isWhitespace) }` — Java 조건은 텍스트가 있으면 항상 거짓이라 경고가 뜨지 않음(강사 완성본은 `\|\|`). Kotlin은 의도대로 셈. 응답은 같고 경고 로그만 다름 |
+| `d.getText() == null \|\| d.getText().isBlank()` (`ingestPdf` 빈 페이지 수) | `d.text.let { it == null \|\| it.all(Character::isWhitespace) }` — Kotlin `isNullOrBlank()`는 NBSP 등도 공백으로 봐서 Java `isBlank()` 기준으로 맞춤 |
 | `record IngestResult(int documents, int chunks, int chunkSize)` (중첩) | 중첩 `data class IngestResult(val documents: Int, val chunks: Int, val chunkSize: Int)` — JSON 형태 같음 |
 
 ## 실행 방법
