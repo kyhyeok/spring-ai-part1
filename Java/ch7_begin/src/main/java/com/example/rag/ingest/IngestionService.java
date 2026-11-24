@@ -72,7 +72,7 @@ public class IngestionService {
 
 		List<Document> docs = reader.get();
 
-		long emptyPages = docs.stream().filter(d -> d.getText() == null && d.getText().isBlank())
+		long emptyPages = docs.stream().filter(d -> d.getText() == null || d.getText().isBlank())
 			.count();
 
 		if (emptyPages > 0) {
