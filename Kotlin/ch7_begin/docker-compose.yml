@@ -18,3 +18,6 @@ services:
 
 volumes:
   pgdata:
+
+#기동: docker compose up -d
+#확인: docker exec -it rag-pgvector psql -U rag -d ragdb
