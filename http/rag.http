@@ -1,0 +1,64 @@
+@host = http://localhost:8080
+
+### ── ① 적재 ─────────────────────────────────────────────
+
+### 샘플 문서 적재 (RagController#ingest)
+POST {{host}}/api/rag/ingest
+
+### 유사도 검색 (RagController#search)
+GET {{host}}/api/rag/search?q=연차는 며칠까지 쓸 수 있나요?&topK=2&source=company-policy.txt
+
+### RAG 답변 (RagController#ask)
+GET {{host}}/api/rag/ask?q=연차는 며칠까지 쓸 수 있나요?
+
+### RAG 답변 (RagController#ask)
+GET {{host}}/api/rag/ask?q=계약 금액은 얼마인가요?
+
+### NO-RAG 답변 (RagController#ask-norag)
+GET {{host}}/api/rag/ask-norag?q=연차는 며칠까지 쓸 수 있나요?
+
+### NO-RAG 답변 (RagController#ask-norag)
+GET {{host}}/api/rag/ask-norag?q=계약 금액은 얼마인가요?
+
+### PDF 적재 (RagController#ingestPdf)
+# 응답의 documents = 페이지 수
+POST {{host}}/api/rag/ingestPdf
+
+
+### ── ② 검색만 (LLM 호출 없음, 임베딩 1회) ──────────────────
+# RAG 답변이 이상하면 여기서 어떤 청크가 검색되는지부터 본다
+
+
+
+### 유사도 검색 - topK 지정
+GET {{host}}/api/rag/search?q=연차 휴가 신청 기한&topK=2
+
+### 유사도 검색 - source 메타데이터 필터 (인사규정만)
+GET {{host}}/api/rag/search?q=지원 한도&source=company-policy.txt
+
+### 유사도 검색 - source 메타데이터 필터 (계약서 PDF만)
+GET {{host}}/api/rag/search?q=지원 한도&source=sample-contract.pdf
+
+
+### ── ③ RAG vs NO-RAG 답변 비교 (같은 질문을 두 번씩) ────────
+
+### RAG 답변 (RagController#ask) - 인사규정 제5조: 주 2일
+GET {{host}}/api/rag/ask?q=재택근무는 주 며칠까지 가능한가요
+
+### NO-RAG 답변 (RagController#askWithoutRag) - 같은 질문, 사내 규정을 모르는 일반 답변
+GET {{host}}/api/rag/ask-norag?q=재택근무는 주 며칠까지 가능한가요
+
+### RAG 답변 - 인사규정 제21조: 연간 1인당 150만원
+GET {{host}}/api/rag/ask?q=교육비 지원 한도는 얼마인가요
+
+### NO-RAG 답변 - 같은 질문
+GET {{host}}/api/rag/ask-norag?q=교육비 지원 한도는 얼마인가요
+
+### RAG 답변 - 계약서 PDF: 금 10,000,000원 (부가가치세 포함)
+GET {{host}}/api/rag/ask?q=결산업무자동화 프로그램 개발 계약금액은 얼마인가요
+
+### NO-RAG 답변 - 같은 질문
+GET {{host}}/api/rag/ask-norag?q=결산업무자동화 프로그램 개발 계약금액은 얼마인가요
+
+### RAG 답변 - 문서에 없는 내용: "제공된 문서에서 확인할 수 없습니다" 기대
+GET {{host}}/api/rag/ask?q=주차비 지원 규정이 있나요
